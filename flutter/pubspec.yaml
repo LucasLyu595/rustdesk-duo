@@ -42,6 +42,11 @@ dependencies:
       url: https://github.com/rustdesk-org/Dash-Chat-2
       ref: bd6b5b41254e57c5bcece202ebfb234de63e6487
   draggable_float_widget: ^0.1.0
+  # iPhone Duo fold and hinge (iOS 27.1+, Flutter 3.44+). MIT. Pinned to a reviewed commit.
+  duo_display:
+    git:
+      url: https://github.com/Geekles007/duo_display.git
+      ref: 0125ef92a28925cfddb543060bb933cc1cf32b00
   settings_ui: ^2.0.2
   flutter_breadcrumb: ^1.0.1
   http: ^1.1.0

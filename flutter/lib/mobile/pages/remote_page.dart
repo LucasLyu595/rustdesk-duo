@@ -25,6 +25,8 @@ import '../../models/shortcut_model.dart';
 import '../../utils/image.dart';
 import '../widgets/dialog.dart';
 import '../widgets/custom_scale_widget.dart';
+import '../duo/duo_fold.dart';
+import '../duo/duo_fold_debug_overlay.dart';
 
 final initText = '1' * 1024;
 
@@ -136,6 +138,7 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
           .showLoading(translate('Connecting...'), onCancel: closeConnection);
     });
     WakelockManager.enable(_uniqueKey);
+    DuoFold.instance.start();
     _physicalFocusNode.requestFocus();
     HardwareKeyboard.instance.addHandler(_handleLocalKeyEvent);
     gFFI.inputModel.listenToMouse(true);
@@ -499,7 +502,7 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
         clientClose(sessionId, gFFI);
         return false;
       },
-      child: Scaffold(
+      child: _withDuoDebugOverlay(Scaffold(
           // workaround for https://github.com/rustdesk/rustdesk/issues/3131
           floatingActionButtonLocation: keyboardIsVisible
               ? FABLocation(FloatingActionButtonLocation.endFloat, 0, -35)
@@ -579,8 +582,17 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
                 })
               ],
             )),
-          )),
+          ))),
     );
+  }
+
+  /// Debug builds with `--dart-define=DUO_DEBUG=true` show the iPhone Duo's fold on top.
+  Widget _withDuoDebugOverlay(Widget child) {
+    if (!kDuoDebug) return child;
+    return Stack(children: [
+      child,
+      const Positioned.fill(child: DuoFoldDebugOverlay()),
+    ]);
   }
 
   bool _handleLocalKeyEvent(KeyEvent event) => handleMobileLocalKeyEvent(event,
