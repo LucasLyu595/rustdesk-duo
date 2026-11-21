@@ -28,6 +28,7 @@ import '../widgets/custom_scale_widget.dart';
 import '../duo/duo_deck.dart';
 import '../duo/duo_fold.dart';
 import '../duo/duo_fold_debug_overlay.dart';
+import '../duo/duo_resolution.dart';
 import '../duo/duo_split.dart';
 
 final initText = '1' * 1024;
@@ -99,6 +100,7 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
   Orientation? _currentOrientation;
   final _uniqueKey = UniqueKey();
   Timer? _iosKeyboardWorkaroundTimer;
+  final _duoResolution = DuoResolutionFit();
 
   final _blockableOverlayState = BlockableOverlayState();
 
@@ -598,6 +600,7 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
         if (mounted) setState(() {});
       },
       below: Builder(builder: (context) {
+        _duoResolution.schedule(gFFI, context);
         final ffiModel = Provider.of<FfiModel>(context);
         return DuoDeck.forSession(gFFI,
             actions: ffiModel.pi.displays.isNotEmpty
