@@ -14,7 +14,7 @@ the built app means offering them this fork's source too.
 | 1 | Build with Flutter 3.44 and Xcode 27.1, so the app fills the Duo's inner screen | done; runs full-screen on the Duo (2026-11-21) |
 | 2 | Detect the fold (`flutter/lib/mobile/duo/`, via the MIT [duo_display](https://github.com/Geekles007/duo_display) plugin) | done; on the Duo the debug overlay read inner, book, 114°, laptop yes, band across the middle (2026-11-21) |
 | 3 | Split the remote page at the fold (`flutter/lib/mobile/duo/duo_split.dart`) | done; on the Duo in the laptop pose (book, 144°) the Mac picture sat above the fold, the band stayed empty, and the area below showed the placeholder (2026-11-21) |
-| 4 | Keyboard and trackpad deck below the fold | next |
+| 4 | Keyboard and trackpad deck below the fold (`flutter/lib/mobile/duo/duo_deck.dart`) | done; on the Duo the trackpad moved the Mac pointer and Cmd, Space then typing reached Spotlight (2026-11-21) |
 
 Why the rebuild matters: on the iPhone Duo, apps built with an SDK older than iOS 27.1 run in a
 smaller compatibility window on the inner display and get no fold information. Upstream's iOS
