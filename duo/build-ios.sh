@@ -47,7 +47,7 @@ if [ "$app_only" -eq 0 ]; then
   git submodule update --init --recursive
 
   say "Rust $RUST_VERSION toolchain"
-  rustup toolchain install "$RUST_VERSION" --profile minimal
+  rustup toolchain install "$RUST_VERSION" --profile minimal --component rustfmt
   rustup target add aarch64-apple-ios --toolchain "$RUST_VERSION"
 
   say "Flutter packages"
