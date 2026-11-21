@@ -11,8 +11,8 @@ the built app means offering them this fork's source too.
 
 | Step | What | State |
 | --- | --- | --- |
-| 1 | Build with Flutter 3.44 and Xcode 27.1, so the app fills the Duo's inner screen | done, untested on a device |
-| 2 | Detect the fold (`flutter/lib/mobile/duo/`, via the MIT [duo_display](https://github.com/Geekles007/duo_display) plugin) | done, debug overlay only |
+| 1 | Build with Flutter 3.44 and Xcode 27.1, so the app fills the Duo's inner screen | done; runs full-screen on the Duo (2026-11-21) |
+| 2 | Detect the fold (`flutter/lib/mobile/duo/`, via the MIT [duo_display](https://github.com/Geekles007/duo_display) plugin) | done; on the Duo the debug overlay read inner, book, 114°, laptop yes, band across the middle (2026-11-21) |
 | 3 | Split the remote page at the fold | next |
 | 4 | Keyboard and trackpad deck below the fold | after 3 |
 
