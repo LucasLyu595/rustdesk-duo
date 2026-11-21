@@ -12,6 +12,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_hbb/common/widgets/peers_view.dart';
 import 'package:flutter_hbb/consts.dart';
+import 'package:flutter_hbb/mobile/duo/duo_split.dart';
 import 'package:flutter_hbb/models/ab_model.dart';
 import 'package:flutter_hbb/models/chat_model.dart';
 import 'package:flutter_hbb/models/cm_file_model.dart';
@@ -2369,6 +2370,7 @@ class CanvasModel with ChangeNotifier {
         //   https://github.com/user-attachments/assets/95f047f2-7f47-4a36-8113-5023989a0c81
         h = h - mediaData.padding.top;
       }
+      h = duoCanvasHeight(h, mediaData.padding.top);
     }
     return Size(w < 0 ? 0 : w, h < 0 ? 0 : h);
   }
