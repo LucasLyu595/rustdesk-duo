@@ -18,7 +18,7 @@ class DuoFoldDebugOverlay extends StatelessWidget {
               ? 'Duo: no geometry reported'
               : 'Duo: ${geometry.screen.name}, ${geometry.posture.name}, '
                   '${geometry.hingeAngle?.toStringAsFixed(0) ?? '?'}°, '
-                  'band ${geometry.hinge?.toString() ?? 'none'}, '
+                  'band ${_rect(geometry.hinge)}, '
                   'laptop ${fold == null ? 'no' : 'yes'}';
           return Stack(
             children: [
@@ -35,7 +35,10 @@ class DuoFoldDebugOverlay extends StatelessWidget {
                   color: const Color(0xAA000000),
                   child: Text(
                     label,
-                    style: const TextStyle(color: Colors.white, fontSize: 11),
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        decoration: TextDecoration.none),
                   ),
                 ),
               ),
@@ -46,3 +49,9 @@ class DuoFoldDebugOverlay extends StatelessWidget {
     );
   }
 }
+
+/// "left,top widthxheight" in logical pixels. Rect.toString() is stripped in release builds.
+String _rect(Rect? r) => r == null
+    ? 'none'
+    : '${r.left.toStringAsFixed(0)},${r.top.toStringAsFixed(0)} '
+        '${r.width.toStringAsFixed(0)}x${r.height.toStringAsFixed(0)}';
