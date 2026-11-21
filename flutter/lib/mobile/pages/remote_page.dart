@@ -25,6 +25,7 @@ import '../../models/shortcut_model.dart';
 import '../../utils/image.dart';
 import '../widgets/dialog.dart';
 import '../widgets/custom_scale_widget.dart';
+import '../duo/duo_deck.dart';
 import '../duo/duo_fold.dart';
 import '../duo/duo_fold_debug_overlay.dart';
 import '../duo/duo_split.dart';
@@ -588,7 +589,9 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
   }
 
   Widget _duoSplit(Widget child) => DuoSplitBody(
-      onFoldChanged: () => gFFI.canvasModel.updateViewStyle(), child: child);
+      onFoldChanged: () => gFFI.canvasModel.updateViewStyle(),
+      below: DuoDeck.forSession(gFFI),
+      child: child);
 
   /// Debug builds with `--dart-define=DUO_DEBUG=true` show the iPhone Duo's fold on top.
   Widget _withDuoDebugOverlay(Widget child) {
