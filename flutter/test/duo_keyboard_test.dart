@@ -47,7 +47,7 @@ void main() {
 
   testWidgets('named keys send their VK names', (tester) async {
     final sink = await _pump(tester);
-    const ids = {
+    final ids = {
       'esc': 'VK_ESCAPE',
       'delete': 'VK_BACK',
       'return': 'VK_RETURN',
@@ -57,6 +57,7 @@ void main() {
       'up': 'VK_UP',
       'down': 'VK_DOWN',
       'right': 'VK_RIGHT',
+      for (var i = 1; i <= 12; i++) 'f$i': 'VK_F$i',
     };
     for (final id in ids.keys) {
       await _tap(tester, id);
@@ -125,14 +126,107 @@ void main() {
     expect(sink.sent, isEmpty);
   });
 
-  testWidgets('letters are labelled in capitals and arrows use arrow glyphs',
-      (tester) async {
+  testWidgets('keycaps carry MacBook labels', (tester) async {
     await _pump(tester);
     expect(find.text('C'), findsOneWidget);
     expect(find.text('c'), findsNothing);
     for (final a in ['\u2190', '\u2191', '\u2193', '\u2192']) {
       expect(find.text(a), findsOneWidget);
     }
+    for (final l in 'esc delete tab return F1 F12'.split(' ')) {
+      expect(find.text(l), findsOneWidget);
+    }
+    expect(find.text('caps lock'), findsOneWidget);
+    expect(find.text('⌃\ncontrol'), findsOneWidget);
+    for (final l in ['⇧\nshift', '⌥\noption', '⌘\ncommand']) {
+      expect(find.text(l), findsNWidgets(2));
+    }
+  });
+
+  testWidgets('rows follow the MacBook table and line up', (tester) async {
+    await _pump(tester);
+    List<String> chars(String c) => c.split('');
+    final rows = <Map<String, double>>[
+      {'esc': 1.5, for (var i = 1; i <= 12; i++) 'f$i': 13 / 12},
+      {for (final c in chars('`1234567890-=')) c: 1, 'delete': 1.5},
+      {'tab': 1.5, for (final c in chars('qwertyuiop[]\\')) c: 1},
+      {
+        'caps': 1.75,
+        for (final c in chars('asdfghjkl;\'')) c: 1,
+        'return': 1.75
+      },
+      {
+        'shift-l': 2.25,
+        for (final c in chars('zxcvbnm,./')) c: 1,
+        'shift-r': 2.25
+      },
+      {
+        'ctrl': 1.25,
+        'option-l': 1.25,
+        'cmd-l': 1.5,
+        'space': 3.75,
+        'cmd-r': 1.5,
+        'option-r': 1.25,
+        for (final a in ['left', 'up', 'down', 'right']) a: 1,
+      },
+    ];
+    final board = tester.getRect(find.byType(DuoKeyboard));
+    Rect rect(String id) => tester.getRect(find.byKey(Key('duo-key-$id')));
+    for (final row in rows) {
+      var left = double.negativeInfinity;
+      for (final k in row.entries) {
+        final r = rect(k.key);
+        expect(r.top, rect(row.keys.first).top);
+        expect(r.left, greaterThan(left));
+        expect(r.width + 4, closeTo(k.value * 669 / 14.5, 0.01));
+        left = r.left;
+      }
+      expect(rect(row.keys.last).right, closeTo(board.right - 2, 0.01));
+    }
+    expect(rect('1').top - rect('esc').top, closeTo(300 / 11, 0.01));
+    expect(rect('q').top - rect('1').top, closeTo(600 / 11, 0.01));
+    expect(find.byKey(const Key('duo-key-fn')), findsNothing);
+    expect(
+        find.byWidgetPredicate((w) =>
+            w.key is ValueKey<String> &&
+            (w.key as ValueKey<String>).value.startsWith('duo-key-')),
+        findsNWidgets(76));
+  });
+
+  testWidgets('caps lock latches, capitalises letters only and is never sent',
+      (tester) async {
+    final sink = await _pump(tester);
+    Color? capColor() => (tester
+            .widget<Container>(find.descendant(
+                of: find.byKey(const Key('duo-key-caps')),
+                matching: find.byType(Container)))
+            .decoration as BoxDecoration)
+        .color;
+    await _tap(tester, 'caps');
+    expect(sink.sent, isEmpty);
+    expect(capColor(), const Color(0xFF3D6FE0));
+
+    for (final c in ['a', '1', ';', 'a']) {
+      await _tap(tester, c);
+    }
+    expect(sink.sent, ['A', '1', ';', 'A']);
+    expect(sink.armedAtSend.every((s) => s.isEmpty), isTrue);
+
+    await _tap(tester, 'cmd-l');
+    await _tap(tester, 'c');
+    expect(sink.sent.last, 'c');
+    expect(sink.armedAtSend.last, {DuoModifier.command});
+    await _tap(tester, 'ctrl');
+    await _tap(tester, 'c');
+    expect(sink.sent.last, 'c');
+    expect(sink.armedAtSend.last, {DuoModifier.ctrl});
+
+    final before = sink.sent.length;
+    await _tap(tester, 'caps');
+    expect(sink.sent.length, before);
+    expect(capColor(), isNot(const Color(0xFF3D6FE0)));
+    await _tap(tester, 'a');
+    expect(sink.sent.last, 'a');
   });
 
   testWidgets('removing the keyboard disarms armed modifiers', (tester) async {

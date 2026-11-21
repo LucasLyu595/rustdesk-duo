@@ -50,30 +50,35 @@ List<_KeySpec> _chars(String s) => s.split('').map(_KeySpec.char).toList();
 
 final _rows = <List<_KeySpec>>[
   [
-    const _KeySpec('esc', 'Esc', 1, name: 'VK_ESCAPE'),
-    ..._chars('`1234567890-='),
-    const _KeySpec('delete', 'Delete', 1.5, name: 'VK_BACK'),
+    const _KeySpec('esc', 'esc', 1.5, name: 'VK_ESCAPE'),
+    for (var i = 1; i <= 12; i++)
+      _KeySpec('f$i', 'F$i', 13 / 12, name: 'VK_F$i'),
   ],
   [
-    const _KeySpec('tab', 'Tab', 1.5, name: 'VK_TAB'),
+    ..._chars('`1234567890-='),
+    const _KeySpec('delete', 'delete', 1.5, name: 'VK_BACK'),
+  ],
+  [
+    const _KeySpec('tab', 'tab', 1.5, name: 'VK_TAB'),
     ..._chars('qwertyuiop[]\\'),
   ],
   [
+    const _KeySpec('caps', 'caps lock', 1.75),
     ..._chars('asdfghjkl;\''),
-    const _KeySpec('return', 'Return', 2, name: 'VK_RETURN'),
+    const _KeySpec('return', 'return', 1.75, name: 'VK_RETURN'),
   ],
   [
-    const _KeySpec('shift-l', 'Shift', 1.5, modifier: DuoModifier.shift),
+    const _KeySpec('shift-l', '⇧\nshift', 2.25, modifier: DuoModifier.shift),
     ..._chars('zxcvbnm,./'),
-    const _KeySpec('shift-r', 'Shift', 1.5, modifier: DuoModifier.shift),
+    const _KeySpec('shift-r', '⇧\nshift', 2.25, modifier: DuoModifier.shift),
   ],
   [
-    const _KeySpec('ctrl', 'Ctrl', 1.2, modifier: DuoModifier.ctrl),
-    const _KeySpec('option-l', 'Option', 1.2, modifier: DuoModifier.alt),
-    const _KeySpec('cmd-l', 'Cmd', 1.4, modifier: DuoModifier.command),
-    const _KeySpec('space', '', 4.6, name: 'VK_SPACE'),
-    const _KeySpec('cmd-r', 'Cmd', 1.4, modifier: DuoModifier.command),
-    const _KeySpec('option-r', 'Option', 1.2, modifier: DuoModifier.alt),
+    const _KeySpec('ctrl', '⌃\ncontrol', 1.25, modifier: DuoModifier.ctrl),
+    const _KeySpec('option-l', '⌥\noption', 1.25, modifier: DuoModifier.alt),
+    const _KeySpec('cmd-l', '⌘\ncommand', 1.5, modifier: DuoModifier.command),
+    const _KeySpec('space', '', 3.75, name: 'VK_SPACE'),
+    const _KeySpec('cmd-r', '⌘\ncommand', 1.5, modifier: DuoModifier.command),
+    const _KeySpec('option-r', '⌥\noption', 1.25, modifier: DuoModifier.alt),
     const _KeySpec('left', '\u2190', 1, name: 'VK_LEFT'),
     const _KeySpec('up', '\u2191', 1, name: 'VK_UP'),
     const _KeySpec('down', '\u2193', 1, name: 'VK_DOWN'),
@@ -92,14 +97,22 @@ class DuoKeyboard extends StatefulWidget {
 
 class _DuoKeyboardState extends State<DuoKeyboard> {
   static const _gap = 4.0;
+  bool _capsLock = false;
 
   bool get _useShifted =>
       widget.sink.isArmed(DuoModifier.shift) &&
       !widget.sink.isArmed(DuoModifier.ctrl) &&
       !widget.sink.isArmed(DuoModifier.command);
 
+  bool get _capsLetters =>
+      _capsLock &&
+      !widget.sink.isArmed(DuoModifier.ctrl) &&
+      !widget.sink.isArmed(DuoModifier.command);
+
   String _glyph(String c) {
-    if (!_useShifted) return c;
+    if (!_useShifted) {
+      return _capsLetters && RegExp(r'[a-z]').hasMatch(c) ? c.toUpperCase() : c;
+    }
     return _shifted[c] ?? c.toUpperCase();
   }
 
@@ -119,6 +132,10 @@ class _DuoKeyboardState extends State<DuoKeyboard> {
   void _tap(_KeySpec k) {
     final sink = widget.sink;
     final m = k.modifier;
+    if (k.id == 'caps') {
+      setState(() => _capsLock = !_capsLock);
+      return;
+    }
     if (m != null) {
       sink.setArmed(m, !sink.isArmed(m));
     } else {
@@ -136,13 +153,14 @@ class _DuoKeyboardState extends State<DuoKeyboard> {
     final c = k.char;
     final label = c != null ? _label(c) : k.label;
     return Expanded(
-      flex: (k.units * 10).round(),
+      flex: (k.units * 120).round(),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: _gap / 2),
         child: _KeyCap(
           key: Key('duo-key-${k.id}'),
           label: label,
-          armed: m != null && widget.sink.isArmed(m),
+          armed: m != null && widget.sink.isArmed(m) ||
+              k.id == 'caps' && _capsLock,
           onTap: () => _tap(k),
         ),
       ),
@@ -155,6 +173,7 @@ class _DuoKeyboardState extends State<DuoKeyboard> {
       children: [
         for (final row in _rows)
           Expanded(
+            flex: identical(row, _rows.first) ? 1 : 2,
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: _gap / 2),
               child: Row(children: [for (final k in row) _key(k)]),
@@ -209,6 +228,7 @@ class _KeyCapState extends State<_KeyCap> {
           fit: BoxFit.scaleDown,
           child: Text(
             widget.label,
+            textAlign: TextAlign.center,
             style: const TextStyle(color: Colors.white, fontSize: 15),
           ),
         ),
