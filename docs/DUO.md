@@ -42,22 +42,45 @@ bash duo/build-ios.sh
 ```
 
 The first run is slow: it builds ffmpeg and the other native libraries through vcpkg and the
-Rust core. Later, after changing only Dart code: `bash duo/build-ios.sh --app-only`.
+Rust core. Then connect the iPhone Duo by USB and, in Terminal on the Mac itself (not over SSH:
+Xcode cannot reach your Apple account there), install it:
 
-Then install: open `flutter/ios/Runner.xcworkspace` in Xcode, pick the iPhone Duo as the run
-destination and press Run, or run `cd flutter && flutter install --release`.
+```sh
+bash duo/install-ios.sh
+```
 
-## Checking the fold detection (step 2)
+It builds the app, signs it with your account and installs it on the one iPhone connected by USB
+(with more than one connected, set `DUO_DEVICE=<udid>` from `xcrun devicectl list devices`). After
+changing only Dart code, `bash duo/install-ios.sh` alone is enough.
 
-Builds include a debug overlay for now (turn it off with `DUO_DEBUG=0`). Connect to the Mac,
-then fold the Duo halfway and hold it upright like a laptop. Expected: an orange band across
-the crease and a line at the bottom left ending in `laptop yes`. Open flat it should say
-`open … laptop no`; closed, `outer … laptop no`. The plugin has only been tested in the iOS
-simulator, so what a real Duo shows here is the first thing to report back.
+## Reinstall after 7 days
+
+With a free Apple account the installed app stops opening after 7 days. Connect the Duo by USB,
+unlock it, and run `bash duo/install-ios.sh` again in Terminal. Your RustDesk settings and peers
+stay. A paid developer account makes each install last a year.
+
+## Using it
+
+1. Open RustDesk on the Duo and connect to your Mac as usual (ID or IP, then its password).
+2. Fold the Duo halfway and stand it up like a laptop. The Mac's screen moves above the fold; a
+   keyboard and a trackpad appear below it. Open it flat or close it and the normal RustDesk
+   layout comes back.
+3. Trackpad: slide one finger to move the pointer; tap to click; tap with two fingers to
+   right-click; slide two fingers up or down to scroll; tap, then touch again and slide, to drag
+   (select text, move windows).
+4. Keyboard: tap Shift, Ctrl, Option or Cmd, then the key (Cmd then C is Cmd+C). The modifier
+   lights up and lets go after the next key; tap it again to cancel. Option with a letter types
+   the plain letter on a Mac; Option with arrows and Option-click work.
+5. RustDesk's own toolbar stays at the bottom: × disconnects, the arrow button hides or shows it.
+
+## Debug overlay
+
+`DUO_DEBUG=1 bash duo/install-ios.sh` draws the fold band in orange and prints what the Duo
+reports (`inner, book, 114°, … laptop yes`). Normal builds leave it out.
 
 ## Signing
 
-- Free Apple account: the app expires after 7 days; rebuild and Run again from Xcode to renew.
+- Free Apple account: the app expires after 7 days; run `bash duo/install-ios.sh` again to renew.
   A free account can't sign push notifications, so this fork drops upstream's push and Wi-Fi
   info entitlements (upstream's code uses neither).
 - Paid Apple Developer Program ($99 a year): each install lasts a year.

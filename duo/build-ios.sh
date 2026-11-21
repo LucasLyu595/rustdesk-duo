@@ -4,7 +4,7 @@
 #
 #   bash duo/build-ios.sh            # full build: bridge, vcpkg deps, Rust library, Flutter app
 #   bash duo/build-ios.sh --app-only # reuse the bridge and Rust library from an earlier run
-#   DUO_DEBUG=0 bash duo/build-ios.sh # without the fold-detection overlay
+#   DUO_DEBUG=1 bash duo/build-ios.sh # with the fold-detection overlay
 #
 # Needs: Xcode 27.1+, Flutter 3.44.x on PATH, rustup, VCPKG_ROOT pointing at a vcpkg checkout,
 # and `brew install nasm yasm cmake pkg-config`.
@@ -76,14 +76,11 @@ fi
 [ -f target/aarch64-apple-ios/release/liblibrustdesk.a ] ||
   die "Rust library missing: run without --app-only first."
 
-# Until the split layout lands, builds show the fold-detection overlay by default so you can
-# check it on the Duo. DUO_DEBUG=0 turns it off.
 defines=""
-[ "${DUO_DEBUG:-1}" = "1" ] && defines="--dart-define=DUO_DEBUG=true"
+[ "${DUO_DEBUG:-0}" = "1" ] && defines="--dart-define=DUO_DEBUG=true"
 
 say "Flutter iOS app"
 (cd flutter && flutter build ios --release $defines)
 echo
 echo "Built flutter/build/ios/iphoneos/Runner.app."
-echo "Install it from Xcode (open flutter/ios/Runner.xcworkspace, pick your iPhone, Run),"
-echo "or: cd flutter && flutter install --release"
+echo "Install it on the iPhone connected by USB: bash duo/install-ios.sh"
