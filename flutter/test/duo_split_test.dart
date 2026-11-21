@@ -37,7 +37,7 @@ void _setView(WidgetTester tester, Size size) {
 }
 
 void main() {
-  tearDown(() => DuoFold.instance.update(_flat()));
+  tearDown(DuoFold.instance.reset);
 
   testWidgets('fold set: child above the fold, placeholder below it',
       (tester) async {
@@ -111,37 +111,112 @@ void main() {
 
     DuoFold.instance.update(_flat());
     await tester.pump();
-    expect(tester.getSize(find.byKey(probeKey)).height, 951);
-    expect(find.byType(DuoSplitPlaceholder), findsNothing);
+    expect(tester.getSize(find.byKey(probeKey)).height, closeTo(427.95, 0.01));
+    expect(find.byType(DuoSplitPlaceholder), findsOneWidget);
     expect(changes, 2);
+
+    _setView(tester, const Size(951, 669));
+    await tester.pump();
+    expect(tester.getSize(find.byKey(probeKey)).height, 669);
+    expect(find.byType(DuoSplitPlaceholder), findsNothing);
+    expect(changes, 3);
     expect(probeKey.currentState, same(state));
   });
 
-  testWidgets('body shorter than the fold: no overflow, no placeholder',
+  testWidgets('body shorter than the split: no overflow, no placeholder',
       (tester) async {
-    _setView(tester, const Size(669, 480));
+    _setView(tester, const Size(669, 951));
     DuoFold.instance.update(_geo());
     const childKey = Key('child');
-    await tester.pumpWidget(const Directionality(
-      textDirection: TextDirection.ltr,
-      child: DuoSplitBody(child: SizedBox.expand(key: childKey)),
-    ));
-    expect(tester.takeException(), isNull);
-    expect(find.byType(DuoSplitPlaceholder), findsNothing);
-    expect(tester.getSize(find.byKey(childKey)).height, 455.5);
-
-    _setView(tester, const Size(669, 400));
-    await tester.pump();
-    expect(tester.takeException(), isNull);
-    expect(find.byType(DuoSplitPlaceholder), findsNothing);
-    expect(tester.getSize(find.byKey(childKey)).height, 400);
+    for (final h in [480.0, 400.0]) {
+      await tester.pumpWidget(Directionality(
+        textDirection: TextDirection.ltr,
+        child: Align(
+          alignment: Alignment.topLeft,
+          child: SizedBox(
+              width: 669,
+              height: h,
+              child: const DuoSplitBody(child: SizedBox.expand(key: childKey))),
+        ),
+      ));
+      expect(tester.takeException(), isNull);
+      expect(find.byType(DuoSplitPlaceholder), findsNothing);
+      expect(tester.getSize(find.byKey(childKey)).height, h == 480 ? 455.5 : h);
+    }
   });
 
-  test('duoCanvasHeight caps the height above the fold only', () {
-    expect(duoCanvasHeight(900, 50), 900);
+  group('duoSplitFrom', () {
+    const portrait = Size(669, 951);
+    const cover = Size(466, 678);
+
+    test('a band in portrait splits at the band, in any posture', () {
+      for (final g in [
+        _geo(),
+        DuoGeometry(
+            posture: DuoPosture.open,
+            screen: DuoScreen.inner,
+            hinge: _band,
+            hingeAngle: 180)
+      ]) {
+        final split = duoSplitFrom(g, portrait, isDuo: true);
+        expect(split, const DuoSplit(pictureBottom: 455.5, deckTop: 495.5));
+      }
+    });
+
+    test('no usable band falls back to 0.45 of the view', () {
+      final unusable = [
+        null,
+        _flat(),
+        _geo(hinge: Rect.zero),
+        _geo(hinge: const Rect.fromLTWH(455.5, 0, 40, 669)),
+        _geo(hinge: const Rect.fromLTWH(0, 940, 669, 40)),
+      ];
+      for (final g in unusable) {
+        final split = duoSplitFrom(g, portrait, isDuo: true)!;
+        expect(split.pictureBottom, closeTo(427.95, 0.01));
+        expect(split.deckTop, split.pictureBottom);
+      }
+      final shut = duoSplitFrom(null, cover, isDuo: true)!;
+      expect(shut.pictureBottom, closeTo(305.1, 0.01));
+    });
+
+    test('landscape and non-Duo give none', () {
+      expect(duoSplitFrom(_geo(), const Size(951, 669), isDuo: true), isNull);
+      expect(duoSplitFrom(_geo(), portrait, isDuo: false), isNull);
+    });
+  });
+
+  test('the latch keeps the cover split', () {
+    const cover = Size(466, 678);
+    DuoFold.instance.update(const DuoGeometry(
+        posture: DuoPosture.open,
+        screen: DuoScreen.unknown,
+        hinge: null,
+        hingeAngle: null));
+    expect(currentDuoSplit(cover), isNull);
+    DuoFold.instance.update(_flat());
+    DuoFold.instance.update(const DuoGeometry(
+        posture: DuoPosture.closed,
+        screen: DuoScreen.outer,
+        hinge: null,
+        hingeAngle: null));
+    expect(currentDuoSplit(cover)!.pictureBottom, closeTo(305.1, 0.01));
+  });
+
+  test('duoCanvasHeight caps the height above the split only', () {
+    const view = Size(669, 951);
+    expect(duoCanvasHeight(900, 50, view), 900);
     DuoFold.instance.update(_geo());
-    expect(duoCanvasHeight(900, 50), 405.5);
-    expect(duoCanvasHeight(300, 50), 300);
-    expect(duoCanvasHeight(900, 500), 0);
+    expect(duoCanvasHeight(900, 50, view), 405.5);
+    expect(duoCanvasHeight(300, 50, view), 300);
+    expect(duoCanvasHeight(900, 500, view), 0);
+    DuoFold.instance.update(const DuoGeometry(
+        posture: DuoPosture.closed,
+        screen: DuoScreen.outer,
+        hinge: null,
+        hingeAngle: null));
+    expect(duoCanvasHeight(900, 50, const Size(466, 678)),
+        closeTo(255.1, 0.01));
+    expect(duoCanvasHeight(900, 50, const Size(678, 466)), 900);
   });
 }

@@ -489,7 +489,7 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
 
   Widget _bottomWidget() => _showGestureHelp
       ? getGestureHelp()
-      : (_showBar && gFFI.ffiModel.pi.displays.isNotEmpty
+      : (_showBar && !_duoDeckActive && gFFI.ffiModel.pi.displays.isNotEmpty
           ? getBottomAppBar()
           : Offstage());
 
@@ -497,7 +497,8 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final keyboardIsVisible =
         keyboardVisibilityController.isVisible && _showEdit;
-    final showActionButton = !_showBar || keyboardIsVisible || _showGestureHelp;
+    final showActionButton =
+        (!_showBar && !_duoDeckActive) || keyboardIsVisible || _showGestureHelp;
 
     return WillPopScope(
       onWillPop: () async {
@@ -588,10 +589,70 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
     );
   }
 
+  bool get _duoDeckActive =>
+      currentDuoSplit(MediaQuery.sizeOf(context)) != null;
+
   Widget _duoSplit(Widget child) => DuoSplitBody(
-      onFoldChanged: () => gFFI.canvasModel.updateViewStyle(),
-      below: DuoDeck.forSession(gFFI),
+      onFoldChanged: () {
+        gFFI.canvasModel.updateViewStyle();
+        if (mounted) setState(() {});
+      },
+      below: Builder(builder: (context) {
+        final ffiModel = Provider.of<FfiModel>(context);
+        return DuoDeck.forSession(gFFI,
+            actions: ffiModel.pi.displays.isNotEmpty
+                ? _duoDeckActions(context)
+                : const []);
+      }),
       child: child);
+
+  List<Widget> _duoDeckActions(BuildContext context) {
+    final ffiModel = Provider.of<FfiModel>(context);
+    final keyboard = !(isWebDesktop || ffiModel.viewOnly || !ffiModel.keyboard);
+    return [
+      DuoDeckAction(
+          icon: Icon(Icons.clear),
+          onPressed: () => clientClose(sessionId, gFFI)),
+      DuoDeckAction(
+          icon: Icon(Icons.tv),
+          onPressed: () {
+            setState(() => _showEdit = false);
+            showOptions(this.context, widget.id, gFFI.dialogManager);
+          }),
+      if (keyboard)
+        DuoDeckAction(icon: Icon(Icons.keyboard), onPressed: openKeyboard),
+      if (keyboard && gFFI.ffiModel.isPeerAndroid)
+        DuoDeckAction(
+            icon: Icon(Icons.build),
+            onPressed: () =>
+                gFFI.dialogManager.toggleMobileActionsOverlay(ffi: gFFI)),
+      if (keyboard && !gFFI.ffiModel.isPeerAndroid)
+        DuoDeckAction(
+            icon: Icon(gFFI.ffiModel.touchMode ? Icons.touch_app : Icons.mouse),
+            onPressed: () =>
+                setState(() => _showGestureHelp = !_showGestureHelp)),
+      if (!isWeb)
+        futureBuilder(
+            future:
+                gFFI.invokeMethod("get_value", "KEY_IS_SUPPORT_VOICE_CALL"),
+            hasData: (isSupportVoiceCall) => DuoDeckAction(
+                  icon: isAndroid && isSupportVoiceCall
+                      ? SvgPicture.asset('assets/chat.svg',
+                          colorFilter:
+                              ColorFilter.mode(Colors.white, BlendMode.srcIn))
+                      : Icon(Icons.message),
+                  onPressed: () => isAndroid && isSupportVoiceCall
+                      ? showChatOptions(widget.id)
+                      : onPressedTextChat(widget.id),
+                )),
+      DuoDeckAction(
+          icon: Icon(Icons.more_vert),
+          onPressed: () {
+            setState(() => _showEdit = false);
+            showActions(widget.id);
+          }),
+    ];
+  }
 
   /// Debug builds with `--dart-define=DUO_DEBUG=true` show the iPhone Duo's fold on top.
   Widget _withDuoDebugOverlay(Widget child) {

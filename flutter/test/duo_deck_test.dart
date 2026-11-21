@@ -40,11 +40,7 @@ void _setView(WidgetTester tester, Size size) {
 }
 
 void main() {
-  tearDown(() => DuoFold.instance.update(const DuoGeometry(
-      posture: DuoPosture.open,
-      screen: DuoScreen.inner,
-      hinge: null,
-      hingeAngle: 180)));
+  tearDown(DuoFold.instance.reset);
 
   testWidgets('fold set: keyboard above trackpad, both below the band',
       (tester) async {
@@ -74,7 +70,7 @@ void main() {
     expect(find.byType(DuoDeck), findsNothing);
   });
 
-  for (final h in [250.0, 300.0, 380.0, 455.0]) {
+  for (final h in [250.0, 300.0, 373.0, 380.0, 455.0]) {
     testWidgets('deck at height $h does not overflow', (tester) async {
       await tester.pumpWidget(Directionality(
         textDirection: TextDirection.ltr,
@@ -86,4 +82,73 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets('session actions: row above the keyboard, actions fire',
+      (tester) async {
+    var a = 0, b = 0;
+    await tester.pumpWidget(Directionality(
+      textDirection: TextDirection.ltr,
+      child: Align(
+        alignment: Alignment.topLeft,
+        child: SizedBox(
+          width: 466,
+          height: 373,
+          child: DuoDeck(keys: _Keys(), pointer: _Pointer(), actions: [
+            DuoDeckAction(icon: const Icon(Icons.clear), onPressed: () => a++),
+            DuoDeckAction(icon: const Icon(Icons.tv), onPressed: () => b++),
+          ]),
+        ),
+      ),
+    ));
+    final row = tester.getRect(find.byKey(const Key('duo-session-row')));
+    final kb = tester.getRect(find.byKey(const Key('duo-keyboard')));
+    expect(row.bottom, lessThanOrEqualTo(kb.top));
+    await tester.tap(find.byIcon(Icons.clear));
+    await tester.tap(find.byIcon(Icons.tv));
+    expect([a, b], [1, 1]);
+  });
+
+  testWidgets('no actions: no session row', (tester) async {
+    await tester.pumpWidget(Directionality(
+      textDirection: TextDirection.ltr,
+      child: Align(
+        alignment: Alignment.topLeft,
+        child: SizedBox(width: 466, height: 373, child: _deck()),
+      ),
+    ));
+    expect(find.byKey(const Key('duo-session-row')), findsNothing);
+    expect(
+        tester.getRect(find.byKey(const Key('duo-keyboard'))).top, 6);
+  });
+
+  for (final h in [72.0, 80.0, 373.0, 455.0]) {
+    testWidgets('deck with actions at height $h does not overflow',
+        (tester) async {
+      await tester.pumpWidget(Directionality(
+        textDirection: TextDirection.ltr,
+        child: Align(
+          alignment: Alignment.topLeft,
+          child: SizedBox(
+            width: 466,
+            height: h,
+            child: DuoDeck(keys: _Keys(), pointer: _Pointer(), actions: [
+              for (final i in _icons)
+                DuoDeckAction(icon: Icon(i), onPressed: () {}),
+            ]),
+          ),
+        ),
+      ));
+      expect(tester.takeException(), isNull);
+      expect(find.byKey(const Key('duo-session-row')), findsOneWidget);
+    });
+  }
 }
+
+const _icons = [
+  Icons.clear,
+  Icons.tv,
+  Icons.keyboard,
+  Icons.build,
+  Icons.message,
+  Icons.more_vert,
+];

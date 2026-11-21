@@ -19,6 +19,8 @@ DuoGeometry _geo({
         posture: posture, screen: screen, hinge: hinge, hingeAngle: angle);
 
 void main() {
+  tearDown(DuoFold.instance.reset);
+
   group('laptopFoldFrom', () {
     test('upright and half folded gives the fold', () {
       final fold = laptopFoldFrom(_geo());
@@ -49,5 +51,26 @@ void main() {
     duo.update(_geo(posture: DuoPosture.open));
     expect(duo.laptop.value, isNull);
     expect(duo.geometry.value?.posture, DuoPosture.open);
+  });
+
+  test('the Duo latch', () {
+    expect(DuoFold.instance.isDuo, isFalse);
+    DuoFold.instance.update(_geo(
+        screen: DuoScreen.unknown,
+        posture: DuoPosture.open,
+        hinge: null,
+        angle: null));
+    expect(DuoFold.instance.isDuo, isFalse);
+    DuoFold.instance.update(_geo());
+    expect(DuoFold.instance.isDuo, isTrue);
+    DuoFold.instance.update(_geo(
+        screen: DuoScreen.outer,
+        posture: DuoPosture.closed,
+        hinge: null,
+        angle: null));
+    expect(DuoFold.instance.isDuo, isTrue);
+    DuoFold.instance.reset();
+    DuoFold.instance.update(_geo(screen: DuoScreen.outer));
+    expect(DuoFold.instance.isDuo, isTrue);
   });
 }

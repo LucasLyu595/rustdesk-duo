@@ -72,6 +72,11 @@ class DuoFold {
   /// The last geometry the device reported, for the debug overlay.
   final ValueNotifier<DuoGeometry?> geometry = ValueNotifier(null);
 
+  /// True once any report showed the inner screen or a hinge angle; never
+  /// cleared in an app run.
+  bool get isDuo => _isDuo;
+  bool _isDuo = false;
+
   StreamSubscription<DuoGeometry>? _subscription;
 
   /// Starts listening on iOS. Safe to call more than once.
@@ -87,7 +92,17 @@ class DuoFold {
   /// Applies one geometry report. Public for tests.
   @visibleForTesting
   void update(DuoGeometry next) {
+    if (next.screen == DuoScreen.inner || next.hingeAngle != null) {
+      _isDuo = true;
+    }
     geometry.value = next;
     laptop.value = laptopFoldFrom(next);
+  }
+
+  @visibleForTesting
+  void reset() {
+    _isDuo = false;
+    geometry.value = null;
+    laptop.value = null;
   }
 }
