@@ -3,8 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../models/model.dart' show FFI;
+import 'duo_shortcuts.dart';
 
-/// One non-interactive status line for the strip above a laptop-pose picture.
+/// The status line, plus shortcut buttons when it can send keys.
 class DuoStatusStrip extends StatefulWidget {
   const DuoStatusStrip({
     super.key,
@@ -12,6 +13,7 @@ class DuoStatusStrip extends StatefulWidget {
     this.delay,
     this.changed,
     this.now = DateTime.now,
+    this.send,
   });
 
   /// The peer's name, or null when unknown.
@@ -25,12 +27,16 @@ class DuoStatusStrip extends StatefulWidget {
 
   final ValueGetter<DateTime> now;
 
+  /// Sends the shortcut buttons' keys; null shows no buttons.
+  final DuoShortcutSender? send;
+
   factory DuoStatusStrip.forSession(FFI ffi, String id) => DuoStatusStrip(
         name: () => ffi.ffiModel.pi.hostname.isNotEmpty
             ? ffi.ffiModel.pi.hostname
             : id,
         delay: () => ffi.qualityMonitorModel.data.delay,
         changed: ffi.qualityMonitorModel,
+        send: duoShortcutSender(ffi),
       );
 
   @override
@@ -90,8 +96,7 @@ class _DuoStatusStripState extends State<DuoStatusStrip> {
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) => IgnorePointer(
+  Widget _status(double fontSize) => IgnorePointer(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 40),
           child: Center(
@@ -99,8 +104,25 @@ class _DuoStatusStripState extends State<DuoStatusStrip> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                style: TextStyle(color: Colors.grey, fontSize: fontSize)),
           ),
         ),
       );
+
+  @override
+  Widget build(BuildContext context) {
+    final send = widget.send;
+    if (send == null) return _status(12);
+    return LayoutBuilder(builder: (context, constraints) {
+      final h = constraints.maxHeight;
+      if (h < kDuoShortcutMinExtent) return _status(12);
+      return Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        SizedBox(height: 16, child: _status(11)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 40),
+          child: DuoShortcutRow(send: send, height: (h - 16).clamp(40.0, 48.0)),
+        ),
+      ]);
+    });
+  }
 }
