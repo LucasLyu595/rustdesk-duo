@@ -36,6 +36,7 @@ class DuoDeck extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final deck = context as Element;
     return ColoredBox(
       color: Colors.black,
       child: Padding(
@@ -63,13 +64,21 @@ class DuoDeck extends StatelessWidget {
                     type: MaterialType.transparency,
                     child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: actions),
+                        children: [
+                          DuoDeckAction(
+                              key: const Key('duo-deck-esc'),
+                              icon: const Text('esc',
+                                  style: TextStyle(
+                                      color: Colors.white, fontSize: 13)),
+                              onPressed: () => _esc(deck)),
+                          ...actions,
+                        ]),
                   ),
                 ),
                 SizedBox(height: gap),
               ],
               SizedBox(
-                height: 5 * rowH + 16,
+                height: (5 * rowH + 16) * 10 / 11,
                 child: DuoKeyboard(key: const Key('duo-keyboard'), sink: keys),
               ),
               const SizedBox(height: 6),
@@ -81,6 +90,15 @@ class DuoDeck extends StatelessWidget {
         }),
       ),
     );
+  }
+
+  void _esc(Element deck) {
+    keys.sendKey('VK_ESCAPE');
+    for (final m in DuoModifier.values) {
+      if (keys.isArmed(m)) keys.setArmed(m, false);
+    }
+    // The keyboard reads the armed flags when it builds; they notify nobody.
+    deck.markNeedsBuild();
   }
 }
 

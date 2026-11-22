@@ -18,6 +18,22 @@ class _Keys implements DuoKeySink {
   void sendKey(String name) {}
 }
 
+class _RecordingKeys implements DuoKeySink {
+  final armed = <DuoModifier>{};
+  final sent = <String>[];
+  final armedAtSend = <Set<DuoModifier>>[];
+
+  @override
+  bool isArmed(DuoModifier m) => armed.contains(m);
+  @override
+  void setArmed(DuoModifier m, bool a) => a ? armed.add(m) : armed.remove(m);
+  @override
+  void sendKey(String name) {
+    sent.add(name);
+    armedAtSend.add({...armed});
+  }
+}
+
 class _Pointer implements DuoPointerSink {
   @override
   void move(Offset delta) {}
@@ -76,6 +92,9 @@ void main() {
     expect(kb.top, closeTo(_band.bottom, 1));
     expect(kb.bottom, lessThanOrEqualTo(tp.top));
     expect(tp.bottom, lessThanOrEqualTo(951));
+    expect(kb.height, closeTo(246 * 10 / 11, 0.01));
+    expect(tp.top, closeTo(kb.bottom + 6, 0.01));
+    expect(tp.bottom, closeTo(945, 0.01));
   });
 
   testWidgets('laptop, 16:9: the picture rests on the crease under the strip',
@@ -183,8 +202,54 @@ void main() {
       ),
     ));
     expect(find.byKey(const Key('duo-session-row')), findsNothing);
+    expect(find.byKey(const Key('duo-deck-esc')), findsNothing);
     expect(
         tester.getRect(find.byKey(const Key('duo-keyboard'))).top, 6);
+  });
+
+  testWidgets(
+      "esc sits at the row's left, sends Escape with the armed modifier, then disarms it",
+      (tester) async {
+    final keys = _RecordingKeys();
+    await tester.pumpWidget(Directionality(
+      textDirection: TextDirection.ltr,
+      child: Align(
+        alignment: Alignment.topLeft,
+        child: SizedBox(
+          width: 466,
+          height: 373,
+          child: DuoDeck(keys: keys, pointer: _Pointer(), actions: [
+            DuoDeckAction(icon: const Icon(Icons.clear), onPressed: () {}),
+          ]),
+        ),
+      ),
+    ));
+    final esc = find.byKey(const Key('duo-deck-esc'));
+    expect(
+        find.descendant(
+            of: find.byKey(const Key('duo-session-row')), matching: esc),
+        findsOneWidget);
+    expect(find.descendant(of: esc, matching: find.text('esc')),
+        findsOneWidget);
+    expect(tester.getRect(esc).right,
+        lessThanOrEqualTo(tester.getRect(find.byIcon(Icons.clear)).left));
+
+    Color? capColor() => (tester
+            .widget<Container>(find.descendant(
+                of: find.byKey(const Key('duo-key-cmd-l')),
+                matching: find.byType(Container)))
+            .decoration as BoxDecoration)
+        .color;
+    await tester.tap(find.byKey(const Key('duo-key-cmd-l')));
+    await tester.pump();
+    expect(capColor(), const Color(0xFF3D6FE0));
+
+    await tester.tap(esc);
+    await tester.pump();
+    expect(keys.sent, ['VK_ESCAPE']);
+    expect(keys.armedAtSend.single, {DuoModifier.command});
+    expect(keys.armed, isEmpty);
+    expect(capColor(), isNot(const Color(0xFF3D6FE0)));
   });
 
   for (final h in [72.0, 80.0, 373.0, 455.0]) {

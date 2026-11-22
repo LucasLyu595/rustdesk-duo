@@ -48,7 +48,6 @@ void main() {
   testWidgets('named keys send their VK names', (tester) async {
     final sink = await _pump(tester);
     final ids = {
-      'esc': 'VK_ESCAPE',
       'delete': 'VK_BACK',
       'return': 'VK_RETURN',
       'tab': 'VK_TAB',
@@ -57,7 +56,6 @@ void main() {
       'up': 'VK_UP',
       'down': 'VK_DOWN',
       'right': 'VK_RIGHT',
-      for (var i = 1; i <= 12; i++) 'f$i': 'VK_F$i',
     };
     for (final id in ids.keys) {
       await _tap(tester, id);
@@ -133,7 +131,7 @@ void main() {
     for (final a in ['\u2190', '\u2191', '\u2193', '\u2192']) {
       expect(find.text(a), findsOneWidget);
     }
-    for (final l in 'esc delete tab return F1 F12'.split(' ')) {
+    for (final l in 'delete tab return'.split(' ')) {
       expect(find.text(l), findsOneWidget);
     }
     expect(find.text('caps lock'), findsOneWidget);
@@ -147,7 +145,6 @@ void main() {
     await _pump(tester);
     List<String> chars(String c) => c.split('');
     final rows = <Map<String, double>>[
-      {'esc': 1.5, for (var i = 1; i <= 12; i++) 'f$i': 13 / 12},
       {for (final c in chars('`1234567890-=')) c: 1, 'delete': 1.5},
       {'tab': 1.5, for (final c in chars('qwertyuiop[]\\')) c: 1},
       {
@@ -183,14 +180,16 @@ void main() {
       }
       expect(rect(row.keys.last).right, closeTo(board.right - 2, 0.01));
     }
-    expect(rect('1').top - rect('esc').top, closeTo(300 / 11, 0.01));
-    expect(rect('q').top - rect('1').top, closeTo(600 / 11, 0.01));
+    expect(rect('q').top - rect('1').top, closeTo(300 / 5, 0.01));
     expect(find.byKey(const Key('duo-key-fn')), findsNothing);
+    for (final id in ['esc', for (var i = 1; i <= 12; i++) 'f$i']) {
+      expect(find.byKey(Key('duo-key-$id')), findsNothing);
+    }
     expect(
         find.byWidgetPredicate((w) =>
             w.key is ValueKey<String> &&
             (w.key as ValueKey<String>).value.startsWith('duo-key-')),
-        findsNWidgets(76));
+        findsNWidgets(63));
   });
 
   testWidgets('caps lock latches, capitalises letters only and is never sent',

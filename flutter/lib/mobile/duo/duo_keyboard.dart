@@ -50,11 +50,6 @@ List<_KeySpec> _chars(String s) => s.split('').map(_KeySpec.char).toList();
 
 final _rows = <List<_KeySpec>>[
   [
-    const _KeySpec('esc', 'esc', 1.5, name: 'VK_ESCAPE'),
-    for (var i = 1; i <= 12; i++)
-      _KeySpec('f$i', 'F$i', 13 / 12, name: 'VK_F$i'),
-  ],
-  [
     ..._chars('`1234567890-='),
     const _KeySpec('delete', 'delete', 1.5, name: 'VK_BACK'),
   ],
@@ -173,7 +168,6 @@ class _DuoKeyboardState extends State<DuoKeyboard> {
       children: [
         for (final row in _rows)
           Expanded(
-            flex: identical(row, _rows.first) ? 1 : 2,
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: _gap / 2),
               child: Row(children: [for (final k in row) _key(k)]),
