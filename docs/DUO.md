@@ -17,7 +17,7 @@ the built app means offering them this fork's source too.
 | 4 | Keyboard and trackpad deck below the fold (`flutter/lib/mobile/duo/duo_deck.dart`) | done; on the Duo the trackpad moved the Mac pointer and Cmd, Space then typing reached Spotlight (2026-11-21) |
 | 5 | Deck in every portrait pose, toolbar hidden, its buttons on the deck (`duo_split.dart`, `duo_deck.dart`) | done on the inner screen: the Mac picture sat above the fold, the deck below it, RustDesk's toolbar was gone and the session row showed (2026-11-21). The cover screen and the flat pose were not captured |
 | 6 | MacBook keyboard layout (`duo_keyboard.dart`) | done: the MacBook layout showed on the inner screen and Lucas typed into the Mac through it (2026-11-21). caps lock was not captured |
-| 7 | Fit the Mac's display mode to the picture when a session starts (`duo_resolution.dart`) | switch done: at session start the M6's 32-inch main display went from 2560x1440 to 800x600, and its menu bar text was readable on the Duo (2026-11-21). The return to 2560x1440 at disconnect was not yet seen |
+| 7 | Fit the Mac's display mode to the picture when a session starts (`duo_resolution.dart`) | switch done: at session start the M6's 32-inch main display went from 2560x1440 to 800x600, and its menu bar text was readable on the Duo (2026-11-21). After disconnect it was back at 2560x1440 (confirmed on the M6) |
 
 Why the rebuild matters: on the iPhone Duo, apps built with an SDK older than iOS 27.1 run in a
 smaller compatibility window on the inner display and get no fold information. Upstream's iOS
