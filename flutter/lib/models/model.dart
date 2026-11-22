@@ -2370,7 +2370,8 @@ class CanvasModel with ChangeNotifier {
         //   https://github.com/user-attachments/assets/95f047f2-7f47-4a36-8113-5023989a0c81
         h = h - mediaData.padding.top;
       }
-      h = duoCanvasHeight(h, mediaData.padding.top, size);
+      h = duoCanvasHeight(h, mediaData.padding.top, size,
+          aspect: duoPeerAspect(parent.target?.ffiModel.pi));
     }
     return Size(w < 0 ? 0 : w, h < 0 ? 0 : h);
   }

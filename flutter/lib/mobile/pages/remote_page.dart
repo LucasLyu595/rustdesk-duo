@@ -599,6 +599,8 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
         gFFI.canvasModel.updateViewStyle();
         if (mounted) setState(() {});
       },
+      aspect: () => duoPeerAspect(gFFI.ffiModel.pi),
+      aspectChanged: gFFI.canvasModel,
       below: Builder(builder: (context) {
         _duoResolution.schedule(gFFI, context);
         final ffiModel = Provider.of<FfiModel>(context);

@@ -72,15 +72,12 @@ class DuoResolutionFit {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _scheduled = false;
       final media = MediaQueryData.fromView(view);
-      final split = currentDuoSplit(media.size);
       final pi = ffi.ffiModel.pi;
       final d = pi.isSet.isTrue
           ? pi.tryGetDisplayIfNotAllDisplay(display: pi.currentDisplay)
           : null;
       tryFit(
-        area: split == null
-            ? null
-            : Size(media.size.width, split.pictureBottom - media.padding.top),
+        area: currentDuoFitArea(media.size, paddingTop: media.padding.top),
         platform: pi.platform,
         keyboard: ffi.ffiModel.keyboard,
         viewOnly: ffi.ffiModel.viewOnly,

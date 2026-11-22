@@ -49,7 +49,7 @@ void main() {
       child: DuoSplitBody(child: SizedBox.expand(key: childKey)),
     ));
     expect(tester.getRect(find.byKey(childKey)),
-        const Rect.fromLTWH(0, 0, 669, 455.5));
+        const Rect.fromLTWH(0, 0, 669, 495.5));
     expect(tester.getRect(find.byType(DuoSplitPlaceholder)),
         const Rect.fromLTRB(0, 495.5, 669, 951));
   });
@@ -101,7 +101,7 @@ void main() {
 
     DuoFold.instance.update(_geo());
     await tester.pump();
-    expect(tester.getSize(find.byKey(probeKey)).height, 455.5);
+    expect(tester.getSize(find.byKey(probeKey)).height, 495.5);
     expect(find.byType(DuoSplitPlaceholder), findsOneWidget);
     expect(changes, 1);
 
@@ -141,26 +141,107 @@ void main() {
       ));
       expect(tester.takeException(), isNull);
       expect(find.byType(DuoSplitPlaceholder), findsNothing);
-      expect(tester.getSize(find.byKey(childKey)).height, h == 480 ? 455.5 : h);
+      expect(tester.getSize(find.byKey(childKey)).height, h);
     }
+  });
+
+  testWidgets('laptop: a touch in the crease band does not reach the picture',
+      (tester) async {
+    _setView(tester, const Size(669, 951));
+    DuoFold.instance.update(_geo());
+    var taps = 0;
+    await tester.pumpWidget(Directionality(
+      textDirection: TextDirection.ltr,
+      child: DuoSplitBody(
+        aspect: () => 4 / 3,
+        child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => taps++,
+            child: const SizedBox.expand()),
+      ),
+    ));
+    await tester.tapAt(const Offset(300, 475));
+    expect(taps, 0);
+    await tester.tapAt(const Offset(300, 450));
+    expect(taps, 1);
+    DuoFold.instance.update(const DuoGeometry(
+        posture: DuoPosture.open,
+        screen: DuoScreen.inner,
+        hinge: _band,
+        hingeAngle: 180));
+    await tester.pump();
+    await tester.tapAt(const Offset(300, 475));
+    expect(taps, 2);
+  });
+
+  testWidgets('a changed peer aspect relayouts the picture', (tester) async {
+    _setView(tester, const Size(669, 951));
+    DuoFold.instance.update(_flat());
+    double? a;
+    var changes = 0;
+    final notifier = ChangeNotifier();
+    addTearDown(notifier.dispose);
+    final probeKey = GlobalKey();
+    await tester.pumpWidget(Directionality(
+      textDirection: TextDirection.ltr,
+      child: DuoSplitBody(
+        onFoldChanged: () => changes++,
+        aspect: () => a,
+        aspectChanged: notifier,
+        child: SizedBox.expand(key: probeKey),
+      ),
+    ));
+    expect(tester.getSize(find.byKey(probeKey)).height, closeTo(427.95, 0.01));
+    a = 4 / 3;
+    notifier.notifyListeners();
+    await tester.pump();
+    expect(tester.getSize(find.byKey(probeKey)).height, closeTo(501.75, 0.01));
+    a = 16 / 9;
+    notifier.notifyListeners();
+    await tester.pump();
+    expect(tester.getSize(find.byKey(probeKey)).height, closeTo(376.31, 0.01));
+    expect(changes, 0);
   });
 
   group('duoSplitFrom', () {
     const portrait = Size(669, 951);
     const cover = Size(466, 678);
 
-    test('a band in portrait splits at the band, in any posture', () {
-      for (final g in [
-        _geo(),
-        DuoGeometry(
-            posture: DuoPosture.open,
-            screen: DuoScreen.inner,
-            hinge: _band,
-            hingeAngle: 180)
+    test(
+        'laptop: the picture runs to the band, or to full width within the deck give',
+        () {
+      for (final c in <(double?, double)>[
+        (4 / 3, 501.75),
+        (16 / 9, 495.5),
+        (null, 495.5),
+        (1.3, 495.5),
       ]) {
-        final split = duoSplitFrom(g, portrait, isDuo: true);
-        expect(split, const DuoSplit(pictureBottom: 455.5, deckTop: 495.5));
+        final split =
+            duoSplitFrom(_geo(), portrait, isDuo: true, aspect: c.$1)!;
+        expect(split.pictureBottom, closeTo(c.$2, 0.001), reason: '${c.$1}');
+        expect(split.deckTop, split.pictureBottom);
       }
+    });
+
+    test('flat: the picture takes its aspect height, capped at 0.6 of the view',
+        () {
+      const openBand = DuoGeometry(
+          posture: DuoPosture.open,
+          screen: DuoScreen.inner,
+          hinge: _band,
+          hingeAngle: 180);
+      for (final g in [_flat(), openBand]) {
+        final split = duoSplitFrom(g, portrait, isDuo: true, aspect: 4 / 3)!;
+        expect(split.pictureBottom, closeTo(501.75, 0.001));
+        expect(split.deckTop, split.pictureBottom);
+        expect(
+            duoSplitFrom(g, portrait, isDuo: true, aspect: 1.0)!.pictureBottom,
+            closeTo(570.6, 0.01));
+      }
+      expect(duoSplitFrom(openBand, portrait, isDuo: true),
+          const DuoSplit(pictureBottom: 455.5, deckTop: 495.5));
+      expect(duoSplitFrom(_flat(), portrait, isDuo: true)!.pictureBottom,
+          closeTo(427.95, 0.01));
     });
 
     test('no usable band falls back to 0.45 of the view', () {
@@ -207,7 +288,7 @@ void main() {
     const view = Size(669, 951);
     expect(duoCanvasHeight(900, 50, view), 900);
     DuoFold.instance.update(_geo());
-    expect(duoCanvasHeight(900, 50, view), 405.5);
+    expect(duoCanvasHeight(900, 50, view), 445.5);
     expect(duoCanvasHeight(300, 50, view), 300);
     expect(duoCanvasHeight(900, 500, view), 0);
     DuoFold.instance.update(const DuoGeometry(

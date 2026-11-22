@@ -1,7 +1,9 @@
 import 'dart:ui';
 
+import 'package:duo_display/duo_display.dart';
 import 'package:flutter_hbb/consts.dart';
 import 'package:flutter_hbb/mobile/duo/duo_resolution.dart';
+import 'package:flutter_hbb/mobile/duo/duo_split.dart';
 import 'package:flutter_hbb/models/model.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -101,5 +103,36 @@ void main() {
     expect(sent, isEmpty);
     run(f, sent);
     expect(sent, ['800x600']);
+  });
+
+  test('the fit area follows the band on the inner screen and picks 4:3', () {
+    const view = Size(669, 951);
+    const band = Rect.fromLTWH(0, 455.5, 669, 40);
+    for (final posture in [DuoPosture.book, DuoPosture.open]) {
+      final area = duoFitAreaFrom(
+          DuoGeometry(
+              posture: posture,
+              screen: DuoScreen.inner,
+              hinge: band,
+              hingeAngle: 90),
+          view,
+          isDuo: true)!;
+      expect(area, const Size(669, 495.5));
+      expect(pick(k4k, area), '800x600');
+    }
+    final flat = duoFitAreaFrom(
+        const DuoGeometry(
+            posture: DuoPosture.open,
+            screen: DuoScreen.inner,
+            hinge: null,
+            hingeAngle: 180),
+        view,
+        isDuo: true)!;
+    expect(flat.height, closeTo(570.6, 0.01));
+    expect(pick(k4k, flat), '800x600');
+    final cover = duoFitAreaFrom(null, const Size(466, 678), isDuo: true)!;
+    expect(cover.height, closeTo(305.1, 0.01));
+    expect(pick(k4k, cover), '800x600');
+    expect(duoFitAreaFrom(null, view, isDuo: false), isNull);
   });
 }
