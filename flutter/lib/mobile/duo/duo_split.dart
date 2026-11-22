@@ -10,31 +10,40 @@ import 'duo_fold.dart';
 @immutable
 class DuoSplit {
   const DuoSplit(
-      {required this.pictureBottom, required this.deckTop, this.crease});
+      {required this.pictureBottom,
+      required this.deckTop,
+      this.rowBand,
+      this.pictureTop = 0});
 
   final double pictureBottom;
   final double deckTop;
 
-  /// The strip of the picture that takes no touches, in the laptop pose.
-  final Rect? crease;
+  /// The band the deck's session row sits in, in the laptop pose.
+  final Rect? rowBand;
+
+  /// Where the picture starts when it rests on the crease and is shorter than
+  /// its area; 0 when it starts at the view's top inset.
+  final double pictureTop;
 
   @override
   bool operator ==(Object other) =>
       other is DuoSplit &&
       other.pictureBottom == pictureBottom &&
       other.deckTop == deckTop &&
-      other.crease == crease;
+      other.rowBand == rowBand &&
+      other.pictureTop == pictureTop;
 
   @override
-  int get hashCode => Object.hash(pictureBottom, deckTop, crease);
+  int get hashCode => Object.hash(pictureBottom, deckTop, rowBand, pictureTop);
 }
 
 /// The share of a portrait view given to the picture when the fold reports no
 /// usable band.
 const double kDuoPictureFraction = 0.45;
 
-/// How far the deck may give way so a laptop-pose picture fills the width.
-const double kDuoDeckGive = 12;
+/// The least height above a laptop-pose picture that shows
+/// [DuoSplitBody.above].
+const double kDuoStripMinExtent = 24;
 
 /// The largest share of a flat inner view the picture may take.
 const double kDuoFlatPictureFraction = 0.6;
@@ -66,11 +75,13 @@ DuoSplit? duoSplitFrom(DuoGeometry? geometry, Size viewSize,
   final full = aspect == null ? null : paddingTop + viewSize.width / aspect;
   final laptop = geometry != null && laptopFoldFrom(geometry) != null;
   if (band != null && laptop) {
-    final y =
-        full != null && full > band.bottom && full <= band.bottom + kDuoDeckGive
-            ? full
-            : band.bottom;
-    return DuoSplit(pictureBottom: y, deckTop: y, crease: band);
+    return DuoSplit(
+        pictureBottom: band.top,
+        deckTop: band.top,
+        rowBand: band,
+        pictureTop: full != null && full < band.top
+            ? band.top - (full - paddingTop)
+            : 0);
   }
   if (geometry?.screen == DuoScreen.inner && !laptop && full != null) {
     final y = min(full, kDuoFlatPictureFraction * viewSize.height);
@@ -82,6 +93,10 @@ DuoSplit? duoSplitFrom(DuoGeometry? geometry, Size viewSize,
   final y = kDuoPictureFraction * viewSize.height;
   return DuoSplit(pictureBottom: y, deckTop: y);
 }
+
+/// How far below the view's top the picture child starts.
+double duoPictureOffset(DuoSplit? split, double paddingTop) =>
+    split == null ? 0 : max(0, split.pictureTop - paddingTop);
 
 DuoSplit? currentDuoSplit(Size viewSize,
         {double paddingTop = 0, double? aspect}) =>
@@ -95,7 +110,9 @@ Size? duoFitAreaFrom(DuoGeometry? geometry, Size viewSize,
   if (split == null) return null;
   if (geometry?.screen == DuoScreen.inner) {
     final band = _usableBand(geometry, viewSize);
-    if (band != null) return Size(viewSize.width, band.bottom - paddingTop);
+    if (band != null && laptopFoldFrom(geometry!) == null) {
+      return Size(viewSize.width, band.bottom - paddingTop);
+    }
     if (laptopFoldFrom(geometry!) == null) {
       return Size(viewSize.width,
           kDuoFlatPictureFraction * viewSize.height - paddingTop);
@@ -116,6 +133,7 @@ class DuoSplitBody extends StatefulWidget {
     super.key,
     required this.child,
     this.below,
+    this.above,
     this.onFoldChanged,
     this.aspect,
     this.aspectChanged,
@@ -125,6 +143,9 @@ class DuoSplitBody extends StatefulWidget {
 
   /// Shown below the split; defaults to [DuoSplitPlaceholder].
   final Widget? below;
+
+  /// Shown above the picture when it rests on the crease and leaves room.
+  final Widget? above;
 
   /// Called when the split changes, not at mount.
   final VoidCallback? onFoldChanged;
@@ -205,17 +226,24 @@ class _DuoSplitBodyState extends State<DuoSplitBody> {
       color: Colors.black,
       child: LayoutBuilder(builder: (context, constraints) {
         final height = constraints.maxHeight;
+        final top = duoPictureOffset(split, _top);
         return Stack(children: [
           Positioned(
-            top: 0,
+            top: top,
             left: 0,
             right: 0,
-            height: split == null ? height : min(split.pictureBottom, height),
+            height: max(0.0,
+                (split == null ? height : min(split.pictureBottom, height)) -
+                    top),
             child: widget.child,
           ),
-          if (split?.crease != null)
-            Positioned.fromRect(
-                rect: split!.crease!, child: const AbsorbPointer()),
+          if (widget.above != null && top >= kDuoStripMinExtent)
+            Positioned(
+                top: _top,
+                left: 0,
+                right: 0,
+                height: top,
+                child: widget.above!),
           if (split != null && height > split.deckTop)
             Positioned(
               top: split.deckTop,
@@ -245,5 +273,6 @@ double duoCanvasHeight(double h, double paddingTop, Size viewSize,
   final split =
       currentDuoSplit(viewSize, paddingTop: paddingTop, aspect: aspect);
   if (split == null) return h;
-  return max(0, min(h, split.pictureBottom - paddingTop));
+  return max(
+      0, min(h, split.pictureBottom - max(split.pictureTop, paddingTop)));
 }

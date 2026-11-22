@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 import '../../models/input_model.dart';
@@ -10,16 +12,26 @@ class DuoDeck extends StatelessWidget {
   final DuoPointerSink pointer;
   final List<Widget> actions;
 
+  /// The height of the strip at the deck's top that holds the session row; null
+  /// lays the row out above the keyboard as usual.
+  final double? rowExtent;
+
   const DuoDeck(
       {Key? key,
       required this.keys,
       required this.pointer,
-      this.actions = const []})
+      this.actions = const [],
+      this.rowExtent})
       : super(key: key);
 
-  factory DuoDeck.forSession(FFI ffi, {List<Widget> actions = const []}) {
+  factory DuoDeck.forSession(FFI ffi,
+      {List<Widget> actions = const [], double? rowExtent}) {
     final input = DuoDeckInput(ffi);
-    return DuoDeck(keys: input, pointer: input, actions: actions);
+    return DuoDeck(
+        keys: input,
+        pointer: input,
+        actions: actions,
+        rowExtent: rowExtent);
   }
 
   @override
@@ -27,14 +39,22 @@ class DuoDeck extends StatelessWidget {
     return ColoredBox(
       color: Colors.black,
       child: Padding(
-        padding: const EdgeInsets.all(6),
+        padding: EdgeInsets.fromLTRB(6, rowExtent == null ? 6 : 0, 6, 6),
         child: LayoutBuilder(builder: (context, constraints) {
           final showRow = actions.isNotEmpty && constraints.maxHeight >= 60;
-          final top = showRow ? 32.0 + 6 : 0.0;
+          final strip =
+              rowExtent != null && constraints.maxHeight >= rowExtent! + 22
+                  ? rowExtent
+                  : null;
+          final top =
+              strip ?? (rowExtent != null ? 6.0 : (showRow ? 32.0 + 6 : 0.0));
+          final gap = strip == null ? 6.0 : max(0.0, (strip - 32) / 2);
           final rowH = (((constraints.maxHeight - top) * 0.6 - 16) / 5)
               .clamp(0.0, 46.0);
           return Column(
             children: [
+              if (rowExtent != null)
+                SizedBox(height: strip == null ? 6 : (showRow ? gap : strip)),
               if (showRow) ...[
                 SizedBox(
                   key: const Key('duo-session-row'),
@@ -46,7 +66,7 @@ class DuoDeck extends StatelessWidget {
                         children: actions),
                   ),
                 ),
-                const SizedBox(height: 6),
+                SizedBox(height: gap),
               ],
               SizedBox(
                 height: 5 * rowH + 16,

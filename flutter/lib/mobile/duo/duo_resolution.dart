@@ -31,6 +31,16 @@ Resolution? chooseDuoResolution(List<Resolution> modes, Size area) {
   return pick;
 }
 
+/// Among the modes at least as wide as [area] in aspect, the closest, then the
+/// lowest; without such a mode, [chooseDuoResolution].
+Resolution? chooseDuoResolutionFullWidth(List<Resolution> modes, Size area) {
+  if (area.width <= 0 || area.height <= 0) return null;
+  final target = area.width / area.height;
+  final wide =
+      modes.where((m) => m.height > 0 && m.width / m.height >= target);
+  return chooseDuoResolution(wide.isEmpty ? modes : wide.toList(), area);
+}
+
 typedef DuoResolutionSender = void Function(int width, int height);
 
 /// Sets the peer's display mode once per session, when a Duo deck shows.
@@ -46,6 +56,7 @@ class DuoResolutionFit {
     required List<Resolution> modes,
     required Size? current,
     required DuoResolutionSender send,
+    bool fullWidth = false,
   }) {
     if (_done) return;
     if (area == null ||
@@ -56,7 +67,9 @@ class DuoResolutionFit {
         current == null) {
       return;
     }
-    final mode = chooseDuoResolution(modes, area);
+    final mode = (fullWidth
+        ? chooseDuoResolutionFullWidth
+        : chooseDuoResolution)(modes, area);
     if (mode == null) return;
     _done = true;
     if (mode.width != current.width.round() ||
@@ -82,6 +95,7 @@ class DuoResolutionFit {
         keyboard: ffi.ffiModel.keyboard,
         viewOnly: ffi.ffiModel.viewOnly,
         modes: pi.resolutions,
+        fullWidth: currentDuoSplit(media.size)?.rowBand != null,
         current: d == null ? null : Size(d.width / d.scale, d.height / d.scale),
         send: (w, h) => bind.sessionChangeResolution(
             sessionId: ffi.sessionId,

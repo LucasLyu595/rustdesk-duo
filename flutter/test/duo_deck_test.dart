@@ -42,8 +42,9 @@ void _setView(WidgetTester tester, Size size) {
 void main() {
   tearDown(DuoFold.instance.reset);
 
-  testWidgets('fold set: keyboard above trackpad, both below the band',
+  testWidgets('laptop: the session row sits in the band, keyboard right below',
       (tester) async {
+    var a = 0;
     _setView(tester, const Size(669, 951));
     DuoFold.instance.update(const DuoGeometry(
         posture: DuoPosture.book,
@@ -52,13 +53,78 @@ void main() {
         hingeAngle: 90));
     await tester.pumpWidget(Directionality(
       textDirection: TextDirection.ltr,
-      child: DuoSplitBody(below: _deck(), child: const SizedBox.expand()),
+      child: DuoSplitBody(
+          below: DuoDeck(
+              keys: _Keys(),
+              pointer: _Pointer(),
+              rowExtent:
+                  currentDuoSplit(const Size(669, 951))!.rowBand!.height,
+              actions: [
+                DuoDeckAction(
+                    icon: const Icon(Icons.clear), onPressed: () => a++),
+                DuoDeckAction(icon: const Icon(Icons.tv), onPressed: () {}),
+              ]),
+          child: const SizedBox.expand()),
     ));
+    final row = tester.getRect(find.byKey(const Key('duo-session-row')));
     final kb = tester.getRect(find.byKey(const Key('duo-keyboard')));
     final tp = tester.getRect(find.byKey(const Key('duo-trackpad')));
-    expect(kb.top, greaterThanOrEqualTo(_band.bottom));
+    expect(row.top, greaterThanOrEqualTo(_band.top));
+    expect(row.bottom, lessThanOrEqualTo(_band.bottom));
+    await tester.tap(find.byIcon(Icons.clear));
+    expect(a, 1);
+    expect(kb.top, closeTo(_band.bottom, 1));
     expect(kb.bottom, lessThanOrEqualTo(tp.top));
     expect(tp.bottom, lessThanOrEqualTo(951));
+  });
+
+  testWidgets('laptop, 16:9: the picture rests on the crease under the strip',
+      (tester) async {
+    _setView(tester, const Size(669, 951));
+    DuoFold.instance.update(const DuoGeometry(
+        posture: DuoPosture.book,
+        screen: DuoScreen.inner,
+        hinge: _band,
+        hingeAngle: 90));
+    double a = 16 / 9;
+    final notifier = ChangeNotifier();
+    addTearDown(notifier.dispose);
+    const pictureKey = Key('picture');
+    const stripKey = Key('strip');
+    await tester.pumpWidget(Directionality(
+      textDirection: TextDirection.ltr,
+      child: DuoSplitBody(
+          aspect: () => a,
+          aspectChanged: notifier,
+          above: const SizedBox.expand(key: stripKey),
+          below: DuoDeck(
+              keys: _Keys(),
+              pointer: _Pointer(),
+              rowExtent: _band.height,
+              actions: [
+                DuoDeckAction(icon: const Icon(Icons.clear), onPressed: () {}),
+              ]),
+          child: const SizedBox.expand(key: pictureKey)),
+    ));
+    final picture = tester.getRect(find.byKey(pictureKey));
+    expect(picture.left, 0);
+    expect(picture.top, closeTo(79.19, 0.01));
+    expect(picture.width, 669);
+    expect(picture.height, closeTo(376.31, 0.01));
+    final strip = tester.getRect(find.byKey(stripKey));
+    expect(strip.top, 0);
+    expect(strip.bottom, closeTo(79.19, 0.01));
+    final row = tester.getRect(find.byKey(const Key('duo-session-row')));
+    expect(row.top, greaterThanOrEqualTo(_band.top));
+    expect(row.bottom, lessThanOrEqualTo(_band.bottom));
+    expect(tester.getRect(find.byKey(const Key('duo-keyboard'))).top,
+        closeTo(495.5, 1));
+    a = 4 / 3;
+    notifier.notifyListeners();
+    await tester.pump();
+    expect(tester.getRect(find.byKey(pictureKey)),
+        const Rect.fromLTWH(0, 0, 669, 455.5));
+    expect(find.byKey(stripKey), findsNothing);
   });
 
   testWidgets('no fold: no deck', (tester) async {

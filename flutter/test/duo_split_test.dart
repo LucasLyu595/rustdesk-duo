@@ -49,9 +49,9 @@ void main() {
       child: DuoSplitBody(child: SizedBox.expand(key: childKey)),
     ));
     expect(tester.getRect(find.byKey(childKey)),
-        const Rect.fromLTWH(0, 0, 669, 495.5));
+        const Rect.fromLTWH(0, 0, 669, 455.5));
     expect(tester.getRect(find.byType(DuoSplitPlaceholder)),
-        const Rect.fromLTRB(0, 495.5, 669, 951));
+        const Rect.fromLTRB(0, 455.5, 669, 951));
   });
 
   testWidgets('fold set with below: that widget replaces the placeholder',
@@ -67,7 +67,7 @@ void main() {
       ),
     ));
     expect(tester.getRect(find.byKey(belowKey)),
-        const Rect.fromLTRB(0, 495.5, 669, 951));
+        const Rect.fromLTRB(0, 455.5, 669, 951));
     expect(find.byType(DuoSplitPlaceholder), findsNothing);
   });
 
@@ -101,7 +101,7 @@ void main() {
 
     DuoFold.instance.update(_geo());
     await tester.pump();
-    expect(tester.getSize(find.byKey(probeKey)).height, 495.5);
+    expect(tester.getSize(find.byKey(probeKey)).height, 455.5);
     expect(find.byType(DuoSplitPlaceholder), findsOneWidget);
     expect(changes, 1);
 
@@ -128,7 +128,7 @@ void main() {
     _setView(tester, const Size(669, 951));
     DuoFold.instance.update(_geo());
     const childKey = Key('child');
-    for (final h in [480.0, 400.0]) {
+    for (final h in [450.0, 400.0]) {
       await tester.pumpWidget(Directionality(
         textDirection: TextDirection.ltr,
         child: Align(
@@ -143,35 +143,6 @@ void main() {
       expect(find.byType(DuoSplitPlaceholder), findsNothing);
       expect(tester.getSize(find.byKey(childKey)).height, h);
     }
-  });
-
-  testWidgets('laptop: a touch in the crease band does not reach the picture',
-      (tester) async {
-    _setView(tester, const Size(669, 951));
-    DuoFold.instance.update(_geo());
-    var taps = 0;
-    await tester.pumpWidget(Directionality(
-      textDirection: TextDirection.ltr,
-      child: DuoSplitBody(
-        aspect: () => 4 / 3,
-        child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () => taps++,
-            child: const SizedBox.expand()),
-      ),
-    ));
-    await tester.tapAt(const Offset(300, 475));
-    expect(taps, 0);
-    await tester.tapAt(const Offset(300, 450));
-    expect(taps, 1);
-    DuoFold.instance.update(const DuoGeometry(
-        posture: DuoPosture.open,
-        screen: DuoScreen.inner,
-        hinge: _band,
-        hingeAngle: 180));
-    await tester.pump();
-    await tester.tapAt(const Offset(300, 475));
-    expect(taps, 2);
   });
 
   testWidgets('a changed peer aspect relayouts the picture', (tester) async {
@@ -207,19 +178,11 @@ void main() {
     const portrait = Size(669, 951);
     const cover = Size(466, 678);
 
-    test(
-        'laptop: the picture runs to the band, or to full width within the deck give',
-        () {
-      for (final c in <(double?, double)>[
-        (4 / 3, 501.75),
-        (16 / 9, 495.5),
-        (null, 495.5),
-        (1.3, 495.5),
-      ]) {
-        final split =
-            duoSplitFrom(_geo(), portrait, isDuo: true, aspect: c.$1)!;
-        expect(split.pictureBottom, closeTo(c.$2, 0.001), reason: '${c.$1}');
-        expect(split.deckTop, split.pictureBottom);
+    test('laptop: the picture ends at the band top, whatever the aspect', () {
+      for (final a in <double?>[4 / 3, 16 / 9, null]) {
+        final split = duoSplitFrom(_geo(), portrait, isDuo: true, aspect: a)!;
+        expect(split.pictureBottom, 455.5, reason: '$a');
+        expect(split.deckTop, 455.5, reason: '$a');
       }
     });
 
@@ -288,7 +251,9 @@ void main() {
     const view = Size(669, 951);
     expect(duoCanvasHeight(900, 50, view), 900);
     DuoFold.instance.update(_geo());
-    expect(duoCanvasHeight(900, 50, view), 445.5);
+    expect(duoCanvasHeight(900, 50, view), 405.5);
+    expect(
+        duoCanvasHeight(900, 0, view, aspect: 16 / 9), closeTo(376.31, 0.01));
     expect(duoCanvasHeight(300, 50, view), 300);
     expect(duoCanvasHeight(900, 500, view), 0);
     DuoFold.instance.update(const DuoGeometry(

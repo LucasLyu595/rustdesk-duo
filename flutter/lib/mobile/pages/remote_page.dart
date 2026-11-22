@@ -30,6 +30,7 @@ import '../duo/duo_fold.dart';
 import '../duo/duo_fold_debug_overlay.dart';
 import '../duo/duo_resolution.dart';
 import '../duo/duo_split.dart';
+import '../duo/duo_status_strip.dart';
 
 final initText = '1' * 1024;
 
@@ -601,13 +602,16 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
       },
       aspect: () => duoPeerAspect(gFFI.ffiModel.pi),
       aspectChanged: gFFI.canvasModel,
+      above: DuoStatusStrip.forSession(gFFI, widget.id),
       below: Builder(builder: (context) {
         _duoResolution.schedule(gFFI, context);
         final ffiModel = Provider.of<FfiModel>(context);
         return DuoDeck.forSession(gFFI,
             actions: ffiModel.pi.displays.isNotEmpty
                 ? _duoDeckActions(context)
-                : const []);
+                : const [],
+            rowExtent:
+                currentDuoSplit(MediaQuery.sizeOf(context))?.rowBand?.height);
       }),
       child: child);
 
@@ -1117,8 +1121,14 @@ class _KeyHelpToolsState extends State<KeyHelpTools> {
     if (renderObject is RenderBox) {
       final size = renderObject.size;
       Offset pos = renderObject.localToGlobal(Offset.zero);
+      final media = MediaQueryData.fromView(View.of(context));
+      final dy = duoPictureOffset(
+          currentDuoSplit(media.size,
+              paddingTop: media.padding.top,
+              aspect: duoPeerAspect(gFFI.ffiModel.pi)),
+          media.padding.top);
       gFFI.cursorModel.keyHelpToolsVisibilityChanged(
-          Rect.fromLTWH(pos.dx, pos.dy, size.width, size.height),
+          Rect.fromLTWH(pos.dx, pos.dy - dy, size.width, size.height),
           widget.keyboardIsVisible);
     }
   }
