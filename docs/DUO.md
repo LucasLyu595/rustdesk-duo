@@ -22,6 +22,7 @@ the built app means offering them this fork's source too.
 | 9 | Laptop pose: control row in the crease, 16:9 picture on it, status line above (`duo_split.dart`, `duo_deck.dart`, `duo_resolution.dart`, `duo_status_strip.dart`) | layout checked on the Duo (2026-11-22): status line "lucas-mm6.local · 7 ms · 00:57", 16:9 picture on the crease at full width, control row in the crease, keyboard below. The first build's auto-fit asked for 800x450, which macOS refused; fixed in step 10 |
 | 10 | Auto-fit skips Mac modes macOS cannot set; status line in the flat pose too (`duo_resolution.dart`, `duo_split.dart`) | done on the Duo (2026-11-22): half folded, the M6 switched to 960x540 and its text was readable; open flat, the Duo reports the crease, so the layout matched the laptop pose (status line, 16:9 picture on the crease, control row in the crease) and the M6 was set to 960x540 again after the reconnect |
 | 11 | No F1-F12 row: esc moves to the control row, the trackpad takes the freed height, keys keep their size (`duo_keyboard.dart`, `duo_deck.dart`) | built and installed on the Duo (2026-11-22, `de2c972fb`); on-device check pending |
+| 12 | Mac shortcut buttons in the top strip (`duo_shortcuts.dart`, `duo_status_strip.dart`) | built and installed on the Duo (2026-11-22, `26c3681b2`); on-device check pending |
 
 Why the rebuild matters: on the iPhone Duo, apps built with an SDK older than iOS 27.1 run in a
 smaller compatibility window on the inner display and get no fold information. Upstream's iOS
@@ -74,8 +75,11 @@ stay. A paid developer account makes each install last a year.
    - Half folded (laptop pose): the deck's control row sits in the crease, and the keyboard
      and trackpad start right below it. The Mac picture rests on the crease at full width. At
      the top, where the screen's corners are rounded, a thin line shows the Mac's name, the
-     delay and the time; it only shows information and takes no touches.
-   - Open flat: the same thin line sits at the top, clear of the rounded corners, and the
+     delay and the time. Below it is a row of Mac shortcut buttons: Mission (Ctrl+Up),
+     Spotlight (Cmd+Space), Desktop (F11, Show Desktop), Switch (Cmd+Tab), Shot (Cmd+Shift+4),
+     Copy (Cmd+C), Paste (Cmd+V) and Hold Quit (Cmd+Q; hold it, a tap does nothing). The
+     buttons only send keys; armed deck modifiers stay as they are.
+   - Open flat: the same thin line and buttons sit at the top, clear of the rounded corners, and the
      picture sits below it at full width. The Duo reports the crease when flat, so the layout is
      the same as half folded (control row in the crease). Without a reported crease the line
      would take the top 60 pt and the deck would start right below the picture.
