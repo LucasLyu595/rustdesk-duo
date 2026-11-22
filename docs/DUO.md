@@ -107,6 +107,38 @@ stay. A paid developer account makes each install last a year.
    capitals until you tap it again. There is no F1-F12 row; esc is the first button of the control row. Option with a
    letter types the plain letter on a Mac; Option with arrows and Option-click work.
 
+## Remote access
+
+The Duo app uses your own RustDesk server by default. The server runs on the M4. The app
+reaches it over WebSocket (`wss`, port 443) through the M4's Cloudflare Tunnel, at
+`rustdesk-ws.lucasagenda.dpdns.org`. You do not need Tailscale on the Duo. The app has the
+server name, the server key and the WebSocket setting built in, so you do not type them. The M6
+uses the same settings.
+
+- Connect from the Duo with the Mac's RustDesk ID and its password.
+- The server can be reached from the internet. The server key and the Mac's password protect the
+  Mac, so keep a strong permanent password on the Mac.
+- All sessions go through the relay on the M4, also at home. There is no direct connection.
+- WebSocket stays on in this build; the app's "Use WebSocket" switch cannot turn it off. If you
+  set another ID server in the app's settings, also set that server's key, and that server must
+  offer WebSocket over HTTPS on port 443. Clear the fields to go back to your own server.
+
+To check that the server is up, run this on any Mac:
+
+    curl -si --http1.1 -H 'Connection: Upgrade' -H 'Upgrade: websocket' \
+      -H 'Sec-WebSocket-Version: 13' -H 'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==' \
+      https://rustdesk-ws.lucasagenda.dpdns.org/ws/id | head -1
+
+Do it again with `/ws/relay`. Both must show `101 Switching Protocols`. `/ws/id` is the ID
+server (`hbbs`) and `/ws/relay` is the relay (`hbbr`). If one fails, run this on the M4:
+
+    launchctl list | grep -E 'rustdesk|cloudflared'
+
+It must show `com.lucas.rustdesk-hbbs`, `com.lucas.rustdesk-hbbr` and
+`local.cloudflared.actuals`. The server files are in `~/rustdesk-server/` on the M4. The tunnel
+rules are in `~/.cloudflared/config.yml`; `grep rustdesk-ws ~/.cloudflared/config.yml` must show
+the two `/ws/id` and `/ws/relay` rules.
+
 ## Debug overlay
 
 `DUO_DEBUG=1 bash duo/install-ios.sh` draws the fold band in orange and prints what the Duo
