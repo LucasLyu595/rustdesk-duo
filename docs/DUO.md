@@ -18,6 +18,7 @@ the built app means offering them this fork's source too.
 | 5 | Deck in every portrait pose, toolbar hidden, its buttons on the deck (`duo_split.dart`, `duo_deck.dart`) | done on the inner screen: the Mac picture sat above the fold, the deck below it, RustDesk's toolbar was gone and the session row showed (2026-11-21). The cover screen and the flat pose were not captured |
 | 6 | MacBook keyboard layout (`duo_keyboard.dart`) | done: the MacBook layout showed on the inner screen and Lucas typed into the Mac through it (2026-11-21). caps lock was not captured |
 | 7 | Fit the Mac's display mode to the picture when a session starts (`duo_resolution.dart`) | switch done: at session start the M6's 32-inch main display went from 2560x1440 to 800x600, and its menu bar text was readable on the Duo (2026-11-21). After disconnect it was back at 2560x1440 (confirmed on the M6) |
+| 8 | Picture fills its width down to the deck (`duo_split.dart`, `duo_resolution.dart`) | built and installed (2026-11-21); on-device check pending |
 
 Why the rebuild matters: on the iPhone Duo, apps built with an SDK older than iOS 27.1 run in a
 smaller compatibility window on the inner display and get no fold information. Upstream's iOS
@@ -66,8 +67,14 @@ stay. A paid developer account makes each install last a year.
 
 1. Open RustDesk on the Duo and connect to your Mac as usual (ID or IP, then its password).
 2. Hold the Duo upright (portrait) in any pose: half folded like a laptop, open flat, or shut on
-   the cover screen. The Mac's screen sits on top and the keyboard and trackpad below it. Half
-   folded or flat, the split is at the fold; on the cover screen the picture takes the top 45%.
+   the cover screen. The Mac's screen sits on top and the keyboard and trackpad below it.
+   - Half folded (laptop pose): the picture runs over the crease down to the deck. Touches on
+     the crease do nothing; use the trackpad and keyboard. A 4:3 Mac picture fills the full
+     width (669x502 pt): the deck starts about 6 pt below the crease to make room, so there are
+     no side bars and no empty strip.
+   - Open flat: the picture takes its own height at full width (669x502 pt for 4:3, at most 60%
+     of the screen), and the deck takes the rest.
+   - Cover screen: the picture takes the top 45%.
    Turn the Duo sideways (landscape) for RustDesk's normal full-screen layout.
 3. While the deck shows, RustDesk's bottom toolbar is hidden. Its buttons are on the slim row at
    the top of the deck: × disconnects; the screen button opens display settings, including
@@ -76,6 +83,8 @@ stay. A paid developer account makes each install last a year.
    and ⋮ buttons work as before.
 4. When a session to a Mac starts with the deck showing, the app asks the Mac for the display
    mode whose shape is closest to the picture area and, of those, the lowest (largest text).
+   On the inner screen the area is the full width down to the bottom of the crease (669x496 pt,
+   so a 4:3 mode such as 800x600), half folded or flat.
    The Mac returns to its own mode when the last session to it closes. Pick another mode under
    the screen button > Resolution.
 5. Trackpad: slide one finger to move the pointer; tap to click; tap with two fingers to
