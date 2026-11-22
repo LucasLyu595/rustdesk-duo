@@ -174,6 +174,29 @@ void main() {
     expect(changes, 0);
   });
 
+  testWidgets('flat without a band: strip, picture and deck stack from the top',
+      (tester) async {
+    _setView(tester, const Size(669, 951));
+    DuoFold.instance.update(_flat());
+    final above = GlobalKey();
+    final below = GlobalKey();
+    final child = GlobalKey();
+    await tester.pumpWidget(Directionality(
+      textDirection: TextDirection.ltr,
+      child: DuoSplitBody(
+        aspect: () => 4 / 3,
+        above: SizedBox.expand(key: above),
+        below: SizedBox.expand(key: below),
+        child: SizedBox.expand(key: child),
+      ),
+    ));
+    expect(tester.getRect(find.byKey(child)),
+        const Rect.fromLTWH(0, 60, 669, 501.75));
+    expect(
+        tester.getRect(find.byKey(above)), const Rect.fromLTWH(0, 0, 669, 60));
+    expect(tester.getTopLeft(find.byKey(below)).dy, closeTo(561.75, 0.001));
+  });
+
   group('duoSplitFrom', () {
     const portrait = Size(669, 951);
     const cover = Size(466, 678);
@@ -186,23 +209,27 @@ void main() {
       }
     });
 
-    test('flat: the picture takes its aspect height, capped at 0.6 of the view',
-        () {
+    test('flat with a band is the laptop split; without one the picture starts'
+        ' 60 pt down', () {
       const openBand = DuoGeometry(
           posture: DuoPosture.open,
           screen: DuoScreen.inner,
           hinge: _band,
           hingeAngle: 180);
-      for (final g in [_flat(), openBand]) {
-        final split = duoSplitFrom(g, portrait, isDuo: true, aspect: 4 / 3)!;
-        expect(split.pictureBottom, closeTo(501.75, 0.001));
-        expect(split.deckTop, split.pictureBottom);
-        expect(
-            duoSplitFrom(g, portrait, isDuo: true, aspect: 1.0)!.pictureBottom,
-            closeTo(570.6, 0.01));
+      for (final a in <double?>[4 / 3, 16 / 9, null]) {
+        expect(duoSplitFrom(openBand, portrait, isDuo: true, aspect: a),
+            duoSplitFrom(_geo(), portrait, isDuo: true, aspect: a),
+            reason: '$a');
       }
-      expect(duoSplitFrom(openBand, portrait, isDuo: true),
-          const DuoSplit(pictureBottom: 455.5, deckTop: 495.5));
+      final split =
+          duoSplitFrom(_flat(), portrait, isDuo: true, aspect: 4 / 3)!;
+      expect(split.pictureTop, 60);
+      expect(split.pictureBottom, closeTo(561.75, 0.001));
+      expect(split.deckTop, split.pictureBottom);
+      expect(
+          duoSplitFrom(_flat(), portrait, isDuo: true, aspect: 1.0)!
+              .pictureBottom,
+          closeTo(570.6, 0.01));
       expect(duoSplitFrom(_flat(), portrait, isDuo: true)!.pictureBottom,
           closeTo(427.95, 0.01));
     });
@@ -250,6 +277,8 @@ void main() {
   test('duoCanvasHeight caps the height above the split only', () {
     const view = Size(669, 951);
     expect(duoCanvasHeight(900, 50, view), 900);
+    DuoFold.instance.update(_flat());
+    expect(duoCanvasHeight(900, 0, view, aspect: 4 / 3), closeTo(501.75, 0.01));
     DuoFold.instance.update(_geo());
     expect(duoCanvasHeight(900, 50, view), 405.5);
     expect(

@@ -11,6 +11,10 @@ import 'duo_split.dart';
 /// How much farther than the best aspect distance a mode may be and still tie.
 const double kDuoAspectTolerance = 0.02;
 
+/// macOS lists modes shorter than this but refuses to set them as the desktop
+/// mode.
+const int kDuoMinMacModeHeight = 540;
+
 /// The mode closest in aspect to [area], then the lowest, for the largest UI.
 Resolution? chooseDuoResolution(List<Resolution> modes, Size area) {
   if (area.width <= 0 || area.height <= 0) return null;
@@ -67,9 +71,11 @@ class DuoResolutionFit {
         current == null) {
       return;
     }
+    final usable =
+        modes.where((m) => m.height >= kDuoMinMacModeHeight).toList();
     final mode = (fullWidth
         ? chooseDuoResolutionFullWidth
-        : chooseDuoResolution)(modes, area);
+        : chooseDuoResolution)(usable.isEmpty ? modes : usable, area);
     if (mode == null) return;
     _done = true;
     if (mode.width != current.width.round() ||
@@ -95,7 +101,7 @@ class DuoResolutionFit {
         keyboard: ffi.ffiModel.keyboard,
         viewOnly: ffi.ffiModel.viewOnly,
         modes: pi.resolutions,
-        fullWidth: currentDuoSplit(media.size)?.rowBand != null,
+        fullWidth: currentDuoFitFullWidth(media.size),
         current: d == null ? null : Size(d.width / d.scale, d.height / d.scale),
         send: (w, h) => bind.sessionChangeResolution(
             sessionId: ffi.sessionId,

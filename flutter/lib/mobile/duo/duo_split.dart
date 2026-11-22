@@ -18,11 +18,11 @@ class DuoSplit {
   final double pictureBottom;
   final double deckTop;
 
-  /// The band the deck's session row sits in, in the laptop pose.
+  /// The band the deck's session row sits in, when the picture rests on it.
   final Rect? rowBand;
 
-  /// Where the picture starts when it rests on the crease and is shorter than
-  /// its area; 0 when it starts at the view's top inset.
+  /// Where the picture starts when it sits below a top strip; 0 when it starts
+  /// at the view's top inset.
   final double pictureTop;
 
   @override
@@ -41,12 +41,15 @@ class DuoSplit {
 /// usable band.
 const double kDuoPictureFraction = 0.45;
 
-/// The least height above a laptop-pose picture that shows
-/// [DuoSplitBody.above].
+/// The least height above a picture that shows [DuoSplitBody.above].
 const double kDuoStripMinExtent = 24;
 
 /// The largest share of a flat inner view the picture may take.
 const double kDuoFlatPictureFraction = 0.6;
+
+/// The strip above a flat picture without a band, clear of the inner screen's
+/// rounded top corners.
+const double kDuoTopClear = 60;
 
 Rect? _usableBand(DuoGeometry? geometry, Size viewSize) {
   final band = geometry?.hinge;
@@ -74,7 +77,7 @@ DuoSplit? duoSplitFrom(DuoGeometry? geometry, Size viewSize,
   final band = _usableBand(geometry, viewSize);
   final full = aspect == null ? null : paddingTop + viewSize.width / aspect;
   final laptop = geometry != null && laptopFoldFrom(geometry) != null;
-  if (band != null && laptop) {
+  if (band != null && geometry?.screen == DuoScreen.inner) {
     return DuoSplit(
         pictureBottom: band.top,
         deckTop: band.top,
@@ -84,8 +87,10 @@ DuoSplit? duoSplitFrom(DuoGeometry? geometry, Size viewSize,
             : 0);
   }
   if (geometry?.screen == DuoScreen.inner && !laptop && full != null) {
-    final y = min(full, kDuoFlatPictureFraction * viewSize.height);
-    return DuoSplit(pictureBottom: y, deckTop: y);
+    final top = paddingTop + kDuoTopClear;
+    final y = min(top + viewSize.width / aspect!,
+        kDuoFlatPictureFraction * viewSize.height);
+    return DuoSplit(pictureBottom: y, deckTop: y, pictureTop: top);
   }
   if (band != null) {
     return DuoSplit(pictureBottom: band.top, deckTop: band.bottom);
@@ -108,18 +113,30 @@ Size? duoFitAreaFrom(DuoGeometry? geometry, Size viewSize,
     {required bool isDuo, double paddingTop = 0}) {
   final split = duoSplitFrom(geometry, viewSize, isDuo: isDuo);
   if (split == null) return null;
-  if (geometry?.screen == DuoScreen.inner) {
-    final band = _usableBand(geometry, viewSize);
-    if (band != null && laptopFoldFrom(geometry!) == null) {
-      return Size(viewSize.width, band.bottom - paddingTop);
-    }
-    if (laptopFoldFrom(geometry!) == null) {
-      return Size(viewSize.width,
-          kDuoFlatPictureFraction * viewSize.height - paddingTop);
-    }
+  if (_flatWithoutBand(geometry, viewSize)) {
+    return Size(viewSize.width,
+        kDuoFlatPictureFraction * viewSize.height - paddingTop - kDuoTopClear);
   }
   return Size(viewSize.width, split.pictureBottom - paddingTop);
 }
+
+bool _flatWithoutBand(DuoGeometry? geometry, Size viewSize) =>
+    geometry?.screen == DuoScreen.inner &&
+    _usableBand(geometry, viewSize) == null &&
+    laptopFoldFrom(geometry!) == null;
+
+/// Whether auto-fit wants a mode at least as wide as the picture area: the
+/// picture rests on the crease or fills the width below the top strip.
+bool duoFitFullWidthFrom(DuoGeometry? geometry, Size viewSize,
+        {required bool isDuo}) =>
+    duoSplitFrom(geometry, viewSize, isDuo: isDuo)?.rowBand != null ||
+    (isDuo &&
+        viewSize.width < viewSize.height &&
+        _flatWithoutBand(geometry, viewSize));
+
+bool currentDuoFitFullWidth(Size viewSize) => duoFitFullWidthFrom(
+    DuoFold.instance.geometry.value, viewSize,
+    isDuo: DuoFold.instance.isDuo);
 
 Size? currentDuoFitArea(Size viewSize, {double paddingTop = 0}) =>
     duoFitAreaFrom(DuoFold.instance.geometry.value, viewSize,
@@ -144,7 +161,7 @@ class DuoSplitBody extends StatefulWidget {
   /// Shown below the split; defaults to [DuoSplitPlaceholder].
   final Widget? below;
 
-  /// Shown above the picture when it rests on the crease and leaves room.
+  /// Shown above the picture when there is room.
   final Widget? above;
 
   /// Called when the split changes, not at mount.

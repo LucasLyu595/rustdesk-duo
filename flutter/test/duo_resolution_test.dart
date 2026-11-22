@@ -22,6 +22,27 @@ final k4k = modes([
   [800, 600],
 ]);
 
+final m6 = modes([
+  [512, 384],
+  [640, 360],
+  [640, 480],
+  [672, 378],
+  [672, 504],
+  [800, 450],
+  [960, 540],
+  [1024, 576],
+  [1152, 648],
+  [1280, 720],
+  [1600, 900],
+  [1920, 1080],
+  [2560, 1440],
+  [3008, 1692],
+  [3360, 1890],
+  [3840, 2160],
+  [800, 600],
+  [1024, 768],
+]);
+
 String? pick(List<Resolution> m, Size area) {
   final r = chooseDuoResolution(m, area);
   return r == null ? null : '${r.width}x${r.height}';
@@ -128,8 +149,8 @@ void main() {
     expect('${r!.width}x${r.height}', '800x600');
   });
 
-  test('the laptop fit area ends at the band top and picks 16:9, the rest 4:3',
-      () {
+  test('the fit area ends at the band top; the flat one without a band is '
+      'shorter', () {
     const view = Size(669, 951);
     const band = Rect.fromLTWH(0, 455.5, 669, 40);
     for (final posture in [DuoPosture.book, DuoPosture.open]) {
@@ -141,13 +162,9 @@ void main() {
               hingeAngle: 90),
           view,
           isDuo: true)!;
-      expect(area, Size(669, posture == DuoPosture.book ? 455.5 : 495.5));
-      if (posture == DuoPosture.book) {
-        final r = chooseDuoResolutionFullWidth(k4k, area)!;
-        expect('${r.width}x${r.height}', '1280x720');
-      } else {
-        expect(pick(k4k, area), '800x600');
-      }
+      expect(area, const Size(669, 455.5));
+      final r = chooseDuoResolutionFullWidth(k4k, area)!;
+      expect('${r.width}x${r.height}', '1280x720');
     }
     final flat = duoFitAreaFrom(
         const DuoGeometry(
@@ -157,11 +174,60 @@ void main() {
             hingeAngle: 180),
         view,
         isDuo: true)!;
-    expect(flat.height, closeTo(570.6, 0.01));
+    expect(flat.height, closeTo(510.6, 0.01));
     expect(pick(k4k, flat), '800x600');
     final cover = duoFitAreaFrom(null, const Size(466, 678), isDuo: true)!;
     expect(cover.height, closeTo(305.1, 0.01));
     expect(pick(k4k, cover), '800x600');
     expect(duoFitAreaFrom(null, view, isDuo: false), isNull);
+  });
+
+  test('modes macOS lists but cannot set are skipped', () {
+    String? fit(Size area, List<Resolution> list, {bool fullWidth = false}) {
+      String? sent;
+      DuoResolutionFit().tryFit(
+        area: area,
+        platform: kPeerPlatformMacOS,
+        keyboard: true,
+        viewOnly: false,
+        modes: list,
+        current: const Size(2560, 1440),
+        send: (w, h) => sent = '${w}x$h',
+        fullWidth: fullWidth,
+      );
+      return sent;
+    }
+
+    expect(fit(const Size(669, 455.5), m6, fullWidth: true), '960x540');
+    expect(fit(const Size(466, 305.1), m6), '800x600');
+    const view = Size(669, 951);
+    const open = DuoGeometry(
+        posture: DuoPosture.open,
+        screen: DuoScreen.inner,
+        hinge: Rect.fromLTWH(0, 455.5, 669, 40),
+        hingeAngle: 180);
+    const flat = DuoGeometry(
+        posture: DuoPosture.open,
+        screen: DuoScreen.inner,
+        hinge: null,
+        hingeAngle: 180);
+    for (final g in [open, flat]) {
+      expect(
+          fit(duoFitAreaFrom(g, view, isDuo: true)!, m6,
+              fullWidth: duoFitFullWidthFrom(g, view, isDuo: true)),
+          g == open ? '960x540' : '800x600');
+    }
+    expect(duoFitFullWidthFrom(flat, view, isDuo: true), isTrue);
+    expect(
+        duoFitFullWidthFrom(null, const Size(466, 678), isDuo: true), isFalse);
+    expect(
+        fit(
+            const Size(669, 455.5),
+            modes([
+              [640, 360],
+              [800, 450]
+            ]),
+            fullWidth: true),
+        '640x360');
   });
 }
