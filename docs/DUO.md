@@ -21,6 +21,7 @@ the built app means offering them this fork's source too.
 | 8 | Picture fills its width down to the deck (`duo_split.dart`, `duo_resolution.dart`) | first version checked on the Duo (2026-11-22): laptop pose, 4:3 picture 669x501 over the crease, no side bars; flat pose, 669x501 at full width with the deck below. Lucas then asked for step 9 in the laptop pose; the flat layout stays |
 | 9 | Laptop pose: control row in the crease, 16:9 picture on it, status line above (`duo_split.dart`, `duo_deck.dart`, `duo_resolution.dart`, `duo_status_strip.dart`) | layout checked on the Duo (2026-11-22): status line "lucas-mm6.local · 7 ms · 00:57", 16:9 picture on the crease at full width, control row in the crease, keyboard below. The first build's auto-fit asked for 800x450, which macOS refused; fixed in step 10 |
 | 10 | Auto-fit skips Mac modes macOS cannot set; status line in the flat pose too (`duo_resolution.dart`, `duo_split.dart`) | done on the Duo (2026-11-22): half folded, the M6 switched to 960x540 and its text was readable; open flat, the Duo reports the crease, so the layout matched the laptop pose (status line, 16:9 picture on the crease, control row in the crease) and the M6 was set to 960x540 again after the reconnect |
+| 11 | No F1-F12 row: esc moves to the control row, the trackpad takes the freed height, keys keep their size (`duo_keyboard.dart`, `duo_deck.dart`) | built and installed on the Duo (2026-11-22, `de2c972fb`); on-device check pending |
 
 Why the rebuild matters: on the iPhone Duo, apps built with an SDK older than iOS 27.1 run in a
 smaller compatibility window on the inner display and get no fold information. Upstream's iOS
@@ -99,7 +100,7 @@ stay. A paid developer account makes each install last a year.
 6. Keyboard: laid out like a MacBook (no fn key; the arrows sit at the bottom right). Tap shift,
    control, option or command, then the key (command then C is Cmd+C). The modifier lights up
    and lets go after the next key; tap it again to cancel. caps lock stays lit and types
-   capitals until you tap it again. esc and F1-F12 are in the thin top row. Option with a
+   capitals until you tap it again. There is no F1-F12 row; esc is the first button of the control row. Option with a
    letter types the plain letter on a Mac; Option with arrows and Option-click work.
 
 ## Debug overlay
