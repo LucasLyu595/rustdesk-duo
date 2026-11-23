@@ -42,7 +42,7 @@ const List<DuoShortcut> kDuoShortcuts = [
       command: true),
   DuoShortcut('desktop', 'Desktop', Icons.desktop_windows_outlined, 'VK_F11'),
   DuoShortcut('switcher', 'Switch', Icons.swap_horiz, 'VK_TAB', command: true),
-  DuoShortcut('window', 'Window', Icons.web_asset, '5',
+  DuoShortcut('window', 'Win Shot', Icons.screenshot_monitor, '5',
       command: true, shift: true),
   DuoShortcut('copy', 'Copy', Icons.copy, 'c', command: true),
   DuoShortcut('paste', 'Paste', Icons.content_paste, 'v', command: true),

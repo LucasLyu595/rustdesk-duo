@@ -64,7 +64,7 @@ void main() {
   testWidgets('each tap button sends its one combo and no other modifiers',
       (tester) async {
     final sent = await pump(tester, const Size(669, 79));
-    expect(find.text('Window'), findsOneWidget);
+    expect(find.text('Win Shot'), findsOneWidget);
     expect(kDuoShortcuts[kDuoShortcutCore - 1].id, 'window');
     const table = <String, Sent>{
       'mission': ('VK_UP', false, true, false, false),
