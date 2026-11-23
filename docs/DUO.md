@@ -24,6 +24,7 @@ the built app means offering them this fork's source too.
 | 11 | No F1-F12 row: esc moves to the control row, the trackpad takes the freed height, keys keep their size (`duo_keyboard.dart`, `duo_deck.dart`) | built and installed on the Duo (2026-11-22, `de2c972fb`); on-device check pending |
 | 12 | Mac shortcut buttons in the top strip (`duo_shortcuts.dart`, `duo_status_strip.dart`) | on the Duo (2026-11-22): Spotlight worked, Mission did nothing on the M6; fixed in step 13 |
 | 13 | Mission reaches a Mac: for a macOS peer it sends Control and Up as map-mode key events, since a legacy Ctrl+Up arrives without the arrow's flags and misses the Mission Control hotkey (`duo_shortcuts.dart`, `src/ui_session_interface.rs`) | built and installed on the Duo (2026-11-22, `b9706196c`); tap check pending |
+| 14 | Desktop reaches a Mac as map-mode F11 (the legacy F11 missed Show Desktop); Shot becomes Window, Cmd+Shift+5 (`duo_shortcuts.dart`) | built and installed on the Duo (2026-11-22, `f7bfc711f`); tap check pending |
 
 Why the rebuild matters: on the iPhone Duo, apps built with an SDK older than iOS 27.1 run in a
 smaller compatibility window on the inner display and get no fold information. Upstream's iOS
@@ -77,9 +78,10 @@ stay. A paid developer account makes each install last a year.
      and trackpad start right below it. The Mac picture rests on the crease at full width. At
      the top, where the screen's corners are rounded, a thin line shows the Mac's name, the
      delay and the time. Below it is a row of Mac shortcut buttons: Mission (Ctrl+Up),
-     Spotlight (Cmd+Space), Desktop (F11, Show Desktop), Switch (Cmd+Tab), Shot (Cmd+Shift+4),
-     Copy (Cmd+C), Paste (Cmd+V) and Hold Quit (Cmd+Q; hold it, a tap does nothing). The
-     buttons only send keys; armed deck modifiers stay as they are.
+     Spotlight (Cmd+Space), Desktop (F11, Show Desktop), Switch (Cmd+Tab), Window
+     (Cmd+Shift+5; on the M6 Shottr then lets you pick a window), Copy (Cmd+C), Paste (Cmd+V)
+     and Hold Quit (Cmd+Q; hold it, a tap does nothing). The buttons only send keys; armed
+     deck modifiers stay as they are.
    - Open flat: the same thin line and buttons sit at the top, clear of the rounded corners, and the
      picture sits below it at full width. The Duo reports the crease when flat, so the layout is
      the same as half folded (control row in the crease). Without a reported crease the line
