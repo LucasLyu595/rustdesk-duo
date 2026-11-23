@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_hbb/mobile/duo/duo_shortcuts.dart';
 import 'package:flutter_hbb/mobile/duo/duo_status_strip.dart';
@@ -114,6 +116,74 @@ void main() {
     await pump(tester, const Size(669, 79), withSender: false);
     expect(find.text('09:05'), findsOneWidget);
     expect(find.byKey(keys.first), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  Future<(List<Sent>, List<(int, bool)>, List<Completer<void>>)> pumpPeer(
+      WidgetTester tester, {required bool mac, bool hold = false}) async {
+    final legacy = <Sent>[];
+    final map = <(int, bool)>[];
+    final gates = <Completer<void>>[];
+    await tester.pumpWidget(Directionality(
+      textDirection: TextDirection.ltr,
+      child: Align(
+        alignment: Alignment.topLeft,
+        child: SizedBox.fromSize(
+          size: const Size(669, 79),
+          child: DuoStatusStrip(
+            now: () => DateTime(2026, 11, 22, 9, 5),
+            send: duoPeerAwareSender(
+                useMapKeys: () => mac,
+                legacy: (name,
+                        {required alt,
+                        required ctrl,
+                        required shift,
+                        required command}) =>
+                    legacy.add((name, alt, ctrl, shift, command)),
+                mapKey: (code, down) {
+                  map.add((code, down));
+                  if (!hold || map.length > 1) return Future.value();
+                  final gate = Completer<void>();
+                  gates.add(gate);
+                  return gate.future;
+                }),
+          ),
+        ),
+      ),
+    ));
+    return (legacy, map, gates);
+  }
+
+  testWidgets('Mission on a Mac peer sends the four map keys in order and no '
+      'legacy combo', (tester) async {
+    final (legacy, map, gates) = await pumpPeer(tester, mac: true, hold: true);
+    await tester.tap(find.byKey(const Key('duo-shortcut-mission')));
+    await tester.pump();
+    expect(map, [(59, true)]);
+    gates.single.complete();
+    await tester.pump();
+    expect(map, [(59, true), (126, true), (126, false), (59, false)]);
+    expect(legacy, isEmpty);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('Mission on another peer sends today\'s legacy Ctrl+Up',
+      (tester) async {
+    final (legacy, map, _) = await pumpPeer(tester, mac: false);
+    await tester.tap(find.byKey(const Key('duo-shortcut-mission')));
+    await tester.pump();
+    expect(legacy, [('VK_UP', false, true, false, false)]);
+    expect(map, isEmpty);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('another button on a Mac peer keeps its legacy combo',
+      (tester) async {
+    final (legacy, map, _) = await pumpPeer(tester, mac: true);
+    await tester.tap(find.byKey(const Key('duo-shortcut-spotlight')));
+    await tester.pump();
+    expect(legacy, [('VK_SPACE', false, false, false, true)]);
+    expect(map, isEmpty);
     await tester.pumpWidget(const SizedBox());
   });
 }

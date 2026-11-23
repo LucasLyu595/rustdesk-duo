@@ -919,6 +919,21 @@ impl<T: InvokeUiSession> Session<T> {
         self.send(Data::Message(msg_out));
     }
 
+    #[cfg(target_os = "ios")]
+    fn send_duo_map_key(&self, name: &str, platform_code: i32, down: bool) {
+        if name != "duo_map_key" {
+            return;
+        }
+        let Ok(chr) = u32::try_from(platform_code) else {
+            return;
+        };
+        let mut key_event = KeyEvent::new();
+        key_event.set_chr(chr);
+        key_event.down = down;
+        key_event.mode = KeyboardMode::Map.into();
+        self.send_key_event(&key_event);
+    }
+
     #[cfg(any(target_os = "ios"))]
     pub fn handle_flutter_raw_key_event(
         &self,
@@ -930,6 +945,7 @@ impl<T: InvokeUiSession> Session<T> {
         _lock_modes: i32,
         _down_or_up: bool,
     ) {
+        self.send_duo_map_key(_name, _platform_code, _down_or_up);
     }
 
     #[cfg(not(any(target_os = "ios")))]

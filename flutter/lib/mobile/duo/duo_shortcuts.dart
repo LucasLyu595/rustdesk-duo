@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import '../../common.dart' show isIOS;
+import '../../consts.dart';
 import '../../models/model.dart' show FFI;
 import '../../models/platform_model.dart';
 
@@ -58,7 +61,7 @@ const double kDuoShortcutSlotMin = 52;
 
 const double _kSlotMax = 72;
 
-DuoShortcutSender duoShortcutSender(FFI ffi) => (name,
+DuoShortcutSender _legacySender(FFI ffi) => (name,
     {required alt, required ctrl, required shift, required command}) {
   final input = ffi.inputModel;
   if (!input.keyboardInputAllowed ||
@@ -76,6 +79,68 @@ DuoShortcutSender duoShortcutSender(FFI ffi) => (name,
       shift: shift,
       command: command);
 };
+
+bool _canSendKeys(FFI ffi) {
+  final input = ffi.inputModel;
+  return input.keyboardInputAllowed &&
+      input.keyboardPerm &&
+      !input.isViewCamera;
+}
+
+/// One map-mode key: the peer's keycode, and whether it goes down.
+typedef DuoMapKey = (int code, bool down);
+
+typedef DuoMapKeySender = Future<void> Function(int code, bool down);
+
+/// kVK_Control and kVK_UpArrow as real key events: a legacy Ctrl+Up reaches
+/// the Mac without the arrow's own flags and misses the Mission Control hotkey.
+const List<DuoMapKey> kDuoMacMissionKeys = [
+  (59, true),
+  (126, true),
+  (126, false),
+  (59, false),
+];
+
+/// Sends Mission as [kDuoMacMissionKeys] through [mapKey] when [useMapKeys],
+/// and everything else through [legacy].
+DuoShortcutSender duoPeerAwareSender(
+        {required bool Function() useMapKeys,
+        required DuoShortcutSender legacy,
+        required DuoMapKeySender mapKey}) =>
+    (name, {required alt, required ctrl, required shift, required command}) {
+      final mission = name == 'VK_UP' && ctrl && !alt && !shift && !command;
+      if (!mission || !useMapKeys()) {
+        legacy(name, alt: alt, ctrl: ctrl, shift: shift, command: command);
+        return;
+      }
+      unawaited(_sendInOrder(kDuoMacMissionKeys, mapKey));
+    };
+
+/// The bridge runs each call on a pool thread, so each is awaited to keep the order.
+Future<void> _sendInOrder(List<DuoMapKey> keys, DuoMapKeySender mapKey) async {
+  for (final (code, down) in keys) {
+    // Keep going, so a failed press still gets its releases.
+    try {
+      await mapKey(code, down);
+    } catch (e) {
+      debugPrint('duo map key $code ${down ? 'down' : 'up'}: $e');
+    }
+  }
+}
+
+DuoShortcutSender duoShortcutSender(FFI ffi) => duoPeerAwareSender(
+    useMapKeys: () =>
+        isIOS &&
+        _canSendKeys(ffi) &&
+        ffi.ffiModel.pi.platform == kPeerPlatformMacOS,
+    legacy: _legacySender(ffi),
+    mapKey: (code, down) => bind.sessionHandleFlutterRawKeyEvent(
+        sessionId: ffi.sessionId,
+        name: 'duo_map_key',
+        platformCode: code,
+        positionCode: 0,
+        lockModes: 0,
+        downOrUp: down));
 
 class DuoShortcutRow extends StatelessWidget {
   const DuoShortcutRow({super.key, required this.send, required this.height});
