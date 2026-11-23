@@ -42,7 +42,7 @@ const List<DuoShortcut> kDuoShortcuts = [
       command: true),
   DuoShortcut('desktop', 'Desktop', Icons.desktop_windows_outlined, 'VK_F11'),
   DuoShortcut('switcher', 'Switch', Icons.swap_horiz, 'VK_TAB', command: true),
-  DuoShortcut('screenshot', 'Shot', Icons.crop_free, '4',
+  DuoShortcut('window', 'Window', Icons.web_asset, '5',
       command: true, shift: true),
   DuoShortcut('copy', 'Copy', Icons.copy, 'c', command: true),
   DuoShortcut('paste', 'Paste', Icons.content_paste, 'v', command: true),
@@ -101,19 +101,38 @@ const List<DuoMapKey> kDuoMacMissionKeys = [
   (59, false),
 ];
 
-/// Sends Mission as [kDuoMacMissionKeys] through [mapKey] when [useMapKeys],
-/// and everything else through [legacy].
+/// kVK_F11 as a real key event: a legacy F11 misses the Show Desktop hotkey.
+const List<DuoMapKey> kDuoMacDesktopKeys = [
+  (103, true),
+  (103, false),
+];
+
+/// The map-mode keys a Mac peer needs for this combo, or null for a legacy one.
+List<DuoMapKey>? _macMapKeys(String name,
+    {required bool alt,
+    required bool ctrl,
+    required bool shift,
+    required bool command}) {
+  if (alt || shift || command) return null;
+  if (name == 'VK_UP' && ctrl) return kDuoMacMissionKeys;
+  if (name == 'VK_F11' && !ctrl) return kDuoMacDesktopKeys;
+  return null;
+}
+
+/// Sends a combo that has Mac map keys through [mapKey] when [useMapKeys], and
+/// everything else through [legacy].
 DuoShortcutSender duoPeerAwareSender(
         {required bool Function() useMapKeys,
         required DuoShortcutSender legacy,
         required DuoMapKeySender mapKey}) =>
     (name, {required alt, required ctrl, required shift, required command}) {
-      final mission = name == 'VK_UP' && ctrl && !alt && !shift && !command;
-      if (!mission || !useMapKeys()) {
+      final keys = _macMapKeys(name,
+          alt: alt, ctrl: ctrl, shift: shift, command: command);
+      if (keys == null || !useMapKeys()) {
         legacy(name, alt: alt, ctrl: ctrl, shift: shift, command: command);
         return;
       }
-      unawaited(_sendInOrder(kDuoMacMissionKeys, mapKey));
+      unawaited(_sendInOrder(keys, mapKey));
     };
 
 /// The bridge runs each call on a pool thread, so each is awaited to keep the order.

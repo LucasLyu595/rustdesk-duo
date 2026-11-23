@@ -64,12 +64,14 @@ void main() {
   testWidgets('each tap button sends its one combo and no other modifiers',
       (tester) async {
     final sent = await pump(tester, const Size(669, 79));
+    expect(find.text('Window'), findsOneWidget);
+    expect(kDuoShortcuts[kDuoShortcutCore - 1].id, 'window');
     const table = <String, Sent>{
       'mission': ('VK_UP', false, true, false, false),
       'spotlight': ('VK_SPACE', false, false, false, true),
       'desktop': ('VK_F11', false, false, false, false),
       'switcher': ('VK_TAB', false, false, false, true),
-      'screenshot': ('4', false, false, true, true),
+      'window': ('5', false, false, true, true),
       'copy': ('c', false, false, false, true),
       'paste': ('v', false, false, false, true),
     };
@@ -173,6 +175,29 @@ void main() {
     await tester.tap(find.byKey(const Key('duo-shortcut-mission')));
     await tester.pump();
     expect(legacy, [('VK_UP', false, true, false, false)]);
+    expect(map, isEmpty);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('Desktop on a Mac peer sends F11 down then up as map keys and no '
+      'legacy key', (tester) async {
+    final (legacy, map, gates) = await pumpPeer(tester, mac: true, hold: true);
+    await tester.tap(find.byKey(const Key('duo-shortcut-desktop')));
+    await tester.pump();
+    expect(map, [(103, true)]);
+    gates.single.complete();
+    await tester.pump();
+    expect(map, [(103, true), (103, false)]);
+    expect(legacy, isEmpty);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('Desktop on another peer sends today\'s legacy F11',
+      (tester) async {
+    final (legacy, map, _) = await pumpPeer(tester, mac: false);
+    await tester.tap(find.byKey(const Key('duo-shortcut-desktop')));
+    await tester.pump();
+    expect(legacy, [('VK_F11', false, false, false, false)]);
     expect(map, isEmpty);
     await tester.pumpWidget(const SizedBox());
   });
