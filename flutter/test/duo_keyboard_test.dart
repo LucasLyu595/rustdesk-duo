@@ -69,7 +69,7 @@ void main() {
     const mods = {
       'cmd-l': DuoModifier.command,
       'ctrl': DuoModifier.ctrl,
-      'option-r': DuoModifier.alt,
+      'option-l': DuoModifier.alt,
     };
     for (final e in mods.entries) {
       await _tap(tester, e.key);
@@ -113,7 +113,6 @@ void main() {
       'shift-l': DuoModifier.shift,
       'ctrl': DuoModifier.ctrl,
       'option-l': DuoModifier.alt,
-      'cmd-r': DuoModifier.command,
     };
     for (final e in mods.entries) {
       await _tap(tester, e.key);
@@ -136,9 +135,9 @@ void main() {
     }
     expect(find.text('caps lock'), findsOneWidget);
     expect(find.text('⌃\ncontrol'), findsOneWidget);
-    for (final l in ['⇧\nshift', '⌥\noption', '⌘\ncommand']) {
-      expect(find.text(l), findsNWidgets(2));
-    }
+    expect(find.text('⇧\nshift'), findsNWidgets(2));
+    expect(find.text('⌥\noption'), findsOneWidget);
+    expect(find.text('⌘\ncommand'), findsOneWidget);
   });
 
   testWidgets('rows follow the MacBook table and line up', (tester) async {
@@ -148,7 +147,7 @@ void main() {
       {for (final c in chars('`1234567890-=')) c: 1, 'delete': 1.5},
       {'tab': 1.5, for (final c in chars('qwertyuiop[]\\')) c: 1},
       {
-        'caps': 1.75,
+        'ctrl': 1.75,
         for (final c in chars('asdfghjkl;\'')) c: 1,
         'return': 1.75
       },
@@ -158,12 +157,10 @@ void main() {
         'shift-r': 2.25
       },
       {
-        'ctrl': 1.25,
+        'caps': 1.25,
         'option-l': 1.25,
         'cmd-l': 1.5,
-        'space': 3.75,
-        'cmd-r': 1.5,
-        'option-r': 1.25,
+        'space': 6.5,
         for (final a in ['left', 'up', 'down', 'right']) a: 1,
       },
     ];
@@ -182,14 +179,25 @@ void main() {
     }
     expect(rect('q').top - rect('1').top, closeTo(300 / 5, 0.01));
     expect(find.byKey(const Key('duo-key-fn')), findsNothing);
-    for (final id in ['esc', for (var i = 1; i <= 12; i++) 'f$i']) {
+    for (final id in [
+      'esc',
+      'cmd-r',
+      'option-r',
+      for (var i = 1; i <= 12; i++) 'f$i'
+    ]) {
       expect(find.byKey(Key('duo-key-$id')), findsNothing);
     }
     expect(
         find.byWidgetPredicate((w) =>
             w.key is ValueKey<String> &&
             (w.key as ValueKey<String>).value.startsWith('duo-key-')),
-        findsNWidgets(63));
+        findsNWidgets(61));
+    final arrows = {'left': 10.5, 'up': 11.5, 'down': 12.5, 'right': 13.5};
+    for (final a in arrows.entries) {
+      expect(rect(a.key).left,
+          closeTo(board.left + a.value * 669 / 14.5 + 2, 0.01));
+      expect(rect(a.key).width + 4, closeTo(669 / 14.5, 0.01));
+    }
   });
 
   testWidgets('caps lock latches, capitalises letters only and is never sent',

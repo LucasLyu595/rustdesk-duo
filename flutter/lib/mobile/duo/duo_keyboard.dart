@@ -58,7 +58,7 @@ final _rows = <List<_KeySpec>>[
     ..._chars('qwertyuiop[]\\'),
   ],
   [
-    const _KeySpec('caps', 'caps lock', 1.75),
+    const _KeySpec('ctrl', '⌃\ncontrol', 1.75, modifier: DuoModifier.ctrl),
     ..._chars('asdfghjkl;\''),
     const _KeySpec('return', 'return', 1.75, name: 'VK_RETURN'),
   ],
@@ -68,12 +68,10 @@ final _rows = <List<_KeySpec>>[
     const _KeySpec('shift-r', '⇧\nshift', 2.25, modifier: DuoModifier.shift),
   ],
   [
-    const _KeySpec('ctrl', '⌃\ncontrol', 1.25, modifier: DuoModifier.ctrl),
+    const _KeySpec('caps', 'caps lock', 1.25),
     const _KeySpec('option-l', '⌥\noption', 1.25, modifier: DuoModifier.alt),
     const _KeySpec('cmd-l', '⌘\ncommand', 1.5, modifier: DuoModifier.command),
-    const _KeySpec('space', '', 3.75, name: 'VK_SPACE'),
-    const _KeySpec('cmd-r', '⌘\ncommand', 1.5, modifier: DuoModifier.command),
-    const _KeySpec('option-r', '⌥\noption', 1.25, modifier: DuoModifier.alt),
+    const _KeySpec('space', '', 6.5, name: 'VK_SPACE'),
     const _KeySpec('left', '\u2190', 1, name: 'VK_LEFT'),
     const _KeySpec('up', '\u2191', 1, name: 'VK_UP'),
     const _KeySpec('down', '\u2193', 1, name: 'VK_DOWN'),
