@@ -28,6 +28,7 @@ the built app means offering them this fork's source too.
 | 15 | Keyboard: no right command or option (wider space bar, arrows unchanged); control and caps lock swap places (`duo_keyboard.dart`) | built and installed on the Duo (2026-11-22, `6d7fc5186`); on-device look pending |
 | 16 | Auto-fit runs again when the picture area changes (cover to inner screen, pose, rotation, also upside down), 1 s after it settles; before, the M6 kept the cover screen's 4:3 mode, so the picture was 4:3 with side gaps and no status line (`duo_resolution.dart`) | on the Duo (2026-11-22): after the cover-to-inner switch and rotation the picture was 16:9 at full width with no side gaps; upside down the strip was still missing, fixed in step 17 |
 | 17 | Upside-down portrait: the iPhone orientation list gains UIInterfaceOrientationPortraitUpsideDown; without it iOS kept the status bar shown upside down and its padding pushed out the strip (`ios/Runner/Info.plist`) | checked on the Duo held upside down (2026-11-22, 23:44): strip "lucas-mm6.local · 37 ms · 23:44" with all eight buttons, no iOS status bar, 16:9 picture on the crease, control row and keyboard as in portrait |
+| 18 | The window-capture button is labelled Win Shot with a screenshot icon (`duo_shortcuts.dart`); `install-ios.sh` now finds a network-connected iPhone; `duo/prep-worktree.sh` readies a linked worktree | installed on the Duo (2026-11-23, `c126ce221`); label look pending |
 
 Why the rebuild matters: on the iPhone Duo, apps built with an SDK older than iOS 27.1 run in a
 smaller compatibility window on the inner display and get no fold information. Upstream's iOS
@@ -81,8 +82,8 @@ stay. A paid developer account makes each install last a year.
      and trackpad start right below it. The Mac picture rests on the crease at full width. At
      the top, where the screen's corners are rounded, a thin line shows the Mac's name, the
      delay and the time. Below it is a row of Mac shortcut buttons: Mission (Ctrl+Up),
-     Spotlight (Cmd+Space), Desktop (F11, Show Desktop), Switch (Cmd+Tab), Window
-     (Cmd+Shift+5; on the M6 Shottr then lets you pick a window), Copy (Cmd+C), Paste (Cmd+V)
+     Spotlight (Cmd+Space), Desktop (F11, Show Desktop), Switch (Cmd+Tab), Win Shot
+     (Cmd+Shift+5; on the M6 Shottr then lets you pick a window to capture), Copy (Cmd+C), Paste (Cmd+V)
      and Hold Quit (Cmd+Q; hold it, a tap does nothing). The buttons only send keys; armed
      deck modifiers stay as they are.
    - Open flat: the same thin line and buttons sit at the top, clear of the rounded corners, and the
