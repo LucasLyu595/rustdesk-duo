@@ -179,8 +179,8 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets('Desktop on a Mac peer sends F11 down then up as map keys and no '
-      'legacy key', (tester) async {
+  testWidgets('Desktop on a Mac peer sends F11, then after the pause Ctrl+F3, '
+      'as map keys and no legacy key', (tester) async {
     final (legacy, map, gates) = await pumpPeer(tester, mac: true, hold: true);
     await tester.tap(find.byKey(const Key('duo-shortcut-desktop')));
     await tester.pump();
@@ -188,6 +188,18 @@ void main() {
     gates.single.complete();
     await tester.pump();
     expect(map, [(103, true), (103, false)]);
+    await tester.pump(kDuoMacDockDelay - const Duration(milliseconds: 1));
+    expect(map, [(103, true), (103, false)]);
+    await tester.pump(const Duration(milliseconds: 1));
+    await tester.pump();
+    expect(map, [
+      (103, true),
+      (103, false),
+      (59, true),
+      (99, true),
+      (99, false),
+      (59, false),
+    ]);
     expect(legacy, isEmpty);
     await tester.pumpWidget(const SizedBox());
   });

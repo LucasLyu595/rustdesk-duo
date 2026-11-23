@@ -107,6 +107,17 @@ const List<DuoMapKey> kDuoMacDesktopKeys = [
   (103, false),
 ];
 
+/// kVK_Control + kVK_F3, "Move focus to the Dock": brings up an auto-hidden Dock.
+const List<DuoMapKey> kDuoMacDockKeys = [
+  (59, true),
+  (99, true),
+  (99, false),
+  (59, false),
+];
+
+/// The Dock hotkey is ignored while Show Desktop is still starting.
+const Duration kDuoMacDockDelay = Duration(milliseconds: 200);
+
 /// The map-mode keys a Mac peer needs for this combo, or null for a legacy one.
 List<DuoMapKey>? _macMapKeys(String name,
     {required bool alt,
@@ -132,6 +143,10 @@ DuoShortcutSender duoPeerAwareSender(
         legacy(name, alt: alt, ctrl: ctrl, shift: shift, command: command);
         return;
       }
+      if (identical(keys, kDuoMacDesktopKeys)) {
+        unawaited(_sendDesktopThenDock(mapKey));
+        return;
+      }
       unawaited(_sendInOrder(keys, mapKey));
     };
 
@@ -145,6 +160,12 @@ Future<void> _sendInOrder(List<DuoMapKey> keys, DuoMapKeySender mapKey) async {
       debugPrint('duo map key $code ${down ? 'down' : 'up'}: $e');
     }
   }
+}
+
+Future<void> _sendDesktopThenDock(DuoMapKeySender mapKey) async {
+  await _sendInOrder(kDuoMacDesktopKeys, mapKey);
+  await Future<void>.delayed(kDuoMacDockDelay);
+  await _sendInOrder(kDuoMacDockKeys, mapKey);
 }
 
 DuoShortcutSender duoShortcutSender(FFI ffi) => duoPeerAwareSender(
