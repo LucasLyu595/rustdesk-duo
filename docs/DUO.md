@@ -25,7 +25,8 @@ the built app means offering them this fork's source too.
 | 12 | Mac shortcut buttons in the top strip (`duo_shortcuts.dart`, `duo_status_strip.dart`) | on the Duo (2026-11-22): Spotlight worked, Mission did nothing on the M6; fixed in step 13 |
 | 13 | Mission reaches a Mac: for a macOS peer it sends Control and Up as map-mode key events, since a legacy Ctrl+Up arrives without the arrow's flags and misses the Mission Control hotkey (`duo_shortcuts.dart`, `src/ui_session_interface.rs`) | built and installed on the Duo (2026-11-22, `b9706196c`); tap check pending |
 | 14 | Desktop reaches a Mac as map-mode F11 (the legacy F11 missed Show Desktop); Shot becomes Window, Cmd+Shift+5 (`duo_shortcuts.dart`) | built and installed on the Duo (2026-11-22, `f7bfc711f`); tap check pending |
-| 15 | Keyboard: no right command or option (wider space bar, arrows unchanged); control and caps lock swap places (`duo_keyboard.dart`) | merged (2026-11-22, `6d7fc5186`); install and on-device look pending |
+| 15 | Keyboard: no right command or option (wider space bar, arrows unchanged); control and caps lock swap places (`duo_keyboard.dart`) | built and installed on the Duo (2026-11-22, `6d7fc5186`); on-device look pending |
+| 16 | Auto-fit runs again when the picture area changes (cover to inner screen, pose, rotation, also upside down), 1 s after it settles; before, the M6 kept the cover screen's 4:3 mode, so the picture was 4:3 with side gaps and no status line (`duo_resolution.dart`) | built and installed on the Duo (2026-11-22, `4727f28e3`); rotation repro pending |
 
 Why the rebuild matters: on the iPhone Duo, apps built with an SDK older than iOS 27.1 run in a
 smaller compatibility window on the inner display and get no fold information. Upstream's iOS
