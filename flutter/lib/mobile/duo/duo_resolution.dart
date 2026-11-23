@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/widgets.dart';
@@ -47,9 +48,18 @@ Resolution? chooseDuoResolutionFullWidth(List<Resolution> modes, Size area) {
 
 typedef DuoResolutionSender = void Function(int width, int height);
 
-/// Sets the peer's display mode once per session, when a Duo deck shows.
+/// How long the fit area must stay the same before a fit is sent.
+const Duration kDuoFitSettle = Duration(seconds: 1);
+
+/// Sets the peer's display mode when a Duo deck shows, and again when the
+/// picture area changes.
 class DuoResolutionFit {
-  bool _done = false;
+  Size? _area;
+  bool _fullWidth = false;
+  Size? _pendingArea;
+  bool _pendingFullWidth = false;
+  Timer? _timer;
+  bool _disposed = false;
   bool _scheduled = false;
 
   void tryFit({
@@ -62,7 +72,6 @@ class DuoResolutionFit {
     required DuoResolutionSender send,
     bool fullWidth = false,
   }) {
-    if (_done) return;
     if (area == null ||
         platform != kPeerPlatformMacOS ||
         !keyboard ||
@@ -71,44 +80,80 @@ class DuoResolutionFit {
         current == null) {
       return;
     }
+    if (area == _area && fullWidth == _fullWidth) return;
     final usable =
         modes.where((m) => m.height >= kDuoMinMacModeHeight).toList();
     final mode = (fullWidth
         ? chooseDuoResolutionFullWidth
         : chooseDuoResolution)(usable.isEmpty ? modes : usable, area);
     if (mode == null) return;
-    _done = true;
+    _area = area;
+    _fullWidth = fullWidth;
     if (mode.width != current.width.round() ||
         mode.height != current.height.round()) {
       send(mode.width, mode.height);
     }
   }
 
+  /// Runs [fit] once [area] and [fullWidth] have stayed the same for
+  /// [kDuoFitSettle]. Public for tests.
+  @visibleForTesting
+  void settle(Size? area, bool fullWidth, VoidCallback fit) {
+    if (_disposed) return;
+    if (area == null || (area == _area && fullWidth == _fullWidth)) {
+      _timer?.cancel();
+      _timer = null;
+      return;
+    }
+    if (_timer != null &&
+        area == _pendingArea &&
+        fullWidth == _pendingFullWidth) {
+      return;
+    }
+    _timer?.cancel();
+    _pendingArea = area;
+    _pendingFullWidth = fullWidth;
+    _timer = Timer(kDuoFitSettle, () {
+      _timer = null;
+      fit();
+    });
+  }
+
+  void dispose() {
+    _disposed = true;
+    _timer?.cancel();
+  }
+
   void schedule(FFI ffi, BuildContext context) {
-    if (_done || _scheduled) return;
+    if (_scheduled) return;
     _scheduled = true;
     final view = View.of(context);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _scheduled = false;
-      final media = MediaQueryData.fromView(view);
-      final pi = ffi.ffiModel.pi;
-      final d = pi.isSet.isTrue
-          ? pi.tryGetDisplayIfNotAllDisplay(display: pi.currentDisplay)
-          : null;
-      tryFit(
-        area: currentDuoFitArea(media.size, paddingTop: media.padding.top),
-        platform: pi.platform,
-        keyboard: ffi.ffiModel.keyboard,
-        viewOnly: ffi.ffiModel.viewOnly,
-        modes: pi.resolutions,
-        fullWidth: currentDuoFitFullWidth(media.size),
-        current: d == null ? null : Size(d.width / d.scale, d.height / d.scale),
-        send: (w, h) => bind.sessionChangeResolution(
-            sessionId: ffi.sessionId,
-            display: pi.currentDisplay,
-            width: w,
-            height: h),
-      );
+      final now = MediaQueryData.fromView(view);
+      settle(currentDuoFitArea(now.size, paddingTop: now.padding.top),
+          currentDuoFitFullWidth(now.size), () {
+        final media = MediaQueryData.fromView(view);
+        final pi = ffi.ffiModel.pi;
+        final d = pi.isSet.isTrue
+            ? pi.tryGetDisplayIfNotAllDisplay(display: pi.currentDisplay)
+            : null;
+        tryFit(
+          area: currentDuoFitArea(media.size, paddingTop: media.padding.top),
+          platform: pi.platform,
+          keyboard: ffi.ffiModel.keyboard,
+          viewOnly: ffi.ffiModel.viewOnly,
+          modes: pi.resolutions,
+          fullWidth: currentDuoFitFullWidth(media.size),
+          current:
+              d == null ? null : Size(d.width / d.scale, d.height / d.scale),
+          send: (w, h) => bind.sessionChangeResolution(
+              sessionId: ffi.sessionId,
+              display: pi.currentDisplay,
+              width: w,
+              height: h),
+        );
+      });
     });
   }
 }

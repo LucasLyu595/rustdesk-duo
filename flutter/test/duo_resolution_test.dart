@@ -95,16 +95,95 @@ void main() {
     return sent;
   }
 
-  test('conditions met send exactly one request per session', () {
+  test('conditions met send one request per fit area', () {
     final f = DuoResolutionFit();
     final sent = <String>[];
     run(f, sent);
     run(f, sent);
-    run(f, sent, area: const Size(466, 251));
+    run(f, sent);
     expect(sent, ['800x600']);
+    run(f, sent, area: const Size(466, 251));
+    expect(sent, ['800x600', '1280x720']);
+    run(f, sent, area: const Size(466, 251));
+    expect(sent, ['800x600', '1280x720']);
   });
 
-  test('already at the chosen size sends nothing and uses up the session', () {
+  testWidgets('a changed fit area is fitted once it has settled',
+      (tester) async {
+    final f = DuoResolutionFit();
+    final sent = <String>[];
+    var current = const Size(3840, 2160);
+    void settle(Size area, bool fullWidth) =>
+        f.settle(area, fullWidth, () {
+          f.tryFit(
+            area: area,
+            platform: kPeerPlatformMacOS,
+            keyboard: true,
+            viewOnly: false,
+            modes: m6,
+            current: current,
+            send: (w, h) {
+              sent.add('${w}x$h');
+              current = Size(w.toDouble(), h.toDouble());
+            },
+            fullWidth: fullWidth,
+          );
+        });
+
+    const cover = Size(466, 305.1);
+    const laptop = Size(669, 455.5);
+    const flat = Size(669, 510.6);
+    settle(cover, false);
+    await tester.pump(kDuoFitSettle);
+    expect(sent, ['800x600']);
+
+    settle(laptop, true);
+    await tester.pump(const Duration(milliseconds: 600));
+    settle(flat, true);
+    await tester.pump(const Duration(milliseconds: 600));
+    settle(laptop, true);
+    await tester.pump(const Duration(milliseconds: 999));
+    expect(sent, ['800x600']);
+    await tester.pump(const Duration(milliseconds: 1));
+    expect(sent, ['800x600', '960x540']);
+
+    settle(laptop, true);
+    await tester.pump(const Duration(seconds: 2));
+    expect(sent, ['800x600', '960x540']);
+  });
+
+  testWidgets(
+      'a settled area whose best mode is set sends nothing; dispose drops a '
+      'pending fit', (tester) async {
+    final f = DuoResolutionFit();
+    final sent = <String>[];
+    void settle(Size area, bool fullWidth) =>
+        f.settle(area, fullWidth, () {
+          f.tryFit(
+            area: area,
+            platform: kPeerPlatformMacOS,
+            keyboard: true,
+            viewOnly: false,
+            modes: m6,
+            current: const Size(960, 540),
+            send: (w, h) => sent.add('${w}x$h'),
+            fullWidth: fullWidth,
+          );
+        });
+
+    settle(const Size(669, 455.5), true);
+    await tester.pump(kDuoFitSettle);
+    settle(const Size(669, 440), true);
+    await tester.pump(kDuoFitSettle);
+    expect(sent, isEmpty);
+
+    settle(const Size(466, 305.1), false);
+    f.dispose();
+    await tester.pump(const Duration(seconds: 2));
+    expect(sent, isEmpty);
+  });
+
+  test('already at the chosen size sends nothing and settles the area', () {
     final f = DuoResolutionFit();
     final sent = <String>[];
     run(f, sent, current: const Size(800, 600));
