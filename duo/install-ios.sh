@@ -24,14 +24,22 @@ if [ -z "$device" ]; then
   device="$(python3 - "$list" <<'EOF'
 import json, sys
 devices = json.load(open(sys.argv[1]))["result"]["devices"]
-wired = [d["hardwareProperties"]["udid"] for d in devices
-         if d["hardwareProperties"].get("platform") == "iOS"
-         and d["connectionProperties"].get("transportType") == "wired"]
-print(wired[0] if len(wired) == 1 else "")
+phones = [d for d in devices
+          if d["hardwareProperties"].get("platform") == "iOS"
+          and d["connectionProperties"].get("transportType") in ("wired", "localNetwork")
+          and d["connectionProperties"].get("tunnelState") == "connected"]
+wired = [d for d in phones if d["connectionProperties"]["transportType"] == "wired"]
+pick = wired if len(wired) == 1 else phones
+if len(pick) == 1:
+    print(pick[0]["hardwareProperties"]["udid"])
+else:
+    for d in phones:
+        print(f'  DUO_DEVICE={d["hardwareProperties"]["udid"]}  # {d["deviceProperties"]["name"]}',
+              file=sys.stderr)
 EOF
 )"
   rm -f "$list"
-  [ -n "$device" ] || die "connect exactly one iPhone by USB, or set DUO_DEVICE (xcrun devicectl list devices)."
+  [ -n "$device" ] || die "connect one iPhone (USB or the same network), or set DUO_DEVICE to one listed above."
 fi
 
 defines=""
