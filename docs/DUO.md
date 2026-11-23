@@ -25,6 +25,7 @@ the built app means offering them this fork's source too.
 | 12 | Mac shortcut buttons in the top strip (`duo_shortcuts.dart`, `duo_status_strip.dart`) | on the Duo (2026-11-22): Spotlight worked, Mission did nothing on the M6; fixed in step 13 |
 | 13 | Mission reaches a Mac: for a macOS peer it sends Control and Up as map-mode key events, since a legacy Ctrl+Up arrives without the arrow's flags and misses the Mission Control hotkey (`duo_shortcuts.dart`, `src/ui_session_interface.rs`) | built and installed on the Duo (2026-11-22, `b9706196c`); tap check pending |
 | 14 | Desktop reaches a Mac as map-mode F11 (the legacy F11 missed Show Desktop); Shot becomes Window, Cmd+Shift+5 (`duo_shortcuts.dart`) | built and installed on the Duo (2026-11-22, `f7bfc711f`); tap check pending |
+| 15 | Keyboard: no right command or option (wider space bar, arrows unchanged); control and caps lock swap places (`duo_keyboard.dart`) | merged (2026-11-22, `6d7fc5186`); install and on-device look pending |
 
 Why the rebuild matters: on the iPhone Duo, apps built with an SDK older than iOS 27.1 run in a
 smaller compatibility window on the inner display and get no fold information. Upstream's iOS
@@ -104,11 +105,14 @@ stay. A paid developer account makes each install last a year.
 5. Trackpad: slide one finger to move the pointer; tap to click; tap with two fingers to
    right-click; slide two fingers up or down to scroll; tap, then touch again and slide, to drag
    (select text, move windows).
-6. Keyboard: laid out like a MacBook (no fn key; the arrows sit at the bottom right). Tap shift,
-   control, option or command, then the key (command then C is Cmd+C). The modifier lights up
-   and lets go after the next key; tap it again to cancel. caps lock stays lit and types
-   capitals until you tap it again. There is no F1-F12 row; esc is the first button of the control row. Option with a
-   letter types the plain letter on a Mac; Option with arrows and Option-click work.
+6. Keyboard: laid out like a MacBook (no fn key; the arrows sit at the bottom right), with three
+   changes: control sits where caps lock is on a Mac (left end of the A row), caps lock sits at
+   the bottom left, and there is no right command or option, so the space bar runs up to the
+   arrows. Tap shift, control, option or command, then the key (command then C is Cmd+C). The
+   modifier lights up and lets go after the next key; tap it again to cancel. caps lock stays lit
+   and types capitals until you tap it again. There is no F1-F12 row; esc is the first button of
+   the control row. Option with a letter types the plain letter on a Mac; Option with arrows and
+   Option-click work.
 
 ## Remote access
 
