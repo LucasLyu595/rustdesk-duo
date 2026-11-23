@@ -112,13 +112,27 @@ stay. A paid developer account makes each install last a year.
 The Duo app uses your own RustDesk server by default. The server runs on the M4. The app
 reaches it over WebSocket (`wss`, port 443) through the M4's Cloudflare Tunnel, at
 `rustdesk-ws.lucasagenda.dpdns.org`. You do not need Tailscale on the Duo. The app has the
-server name, the server key and the WebSocket setting built in, so you do not type them. The M6
-uses the same settings.
+server name, the server key and the WebSocket setting built in, so you do not type them.
+
+The M6 (the Mac you control) does NOT use WebSocket. The open-source server cannot register a
+device over WebSocket: it answers `RegisterPk` with `NOT_SUPPORT`, and the Mac's log then shows
+`unknown RegisterPkResponse`. So the M6 registers over the home network: its ID server and relay
+server are the M4's LAN address `10.0.0.49`, with no API server and WebSocket off. `hbbs` runs with
+`--mask 10.0.0.0/24` and the environment variable `LOCAL_IP=10.0.0.49`. When the M6 offers the LAN
+relay to a Duo that comes in through the tunnel, `hbbs` replaces it with the public relay
+(`-r rustdesk-ws.lucasagenda.dpdns.org:21117`), so the Duo reaches the same `hbbr` over `wss`.
+
+Set the M6 options with `sudo /Applications/RustDesk.app/Contents/MacOS/RustDesk --option <key>
+<value>`. Do not edit `RustDesk2.toml` directly: the root service syncs its own copy back. `sudo`
+keeps your home folder, so afterwards give the file back to your user with `chown`. To check
+that the M6 is registered, run this on the M4; it must list the M6's ID:
+
+    sqlite3 ~/rustdesk-server/db_v2.sqlite3 'select id from peer'
 
 - Connect from the Duo with the Mac's RustDesk ID and its password.
 - The server can be reached from the internet. The server key and the Mac's password protect the
   Mac, so keep a strong permanent password on the Mac.
-- All sessions go through the relay on the M4, also at home. There is no direct connection.
+- All Duo sessions go through the relay on the M4, also at home. There is no direct connection.
 - WebSocket stays on in this build; the app's "Use WebSocket" switch cannot turn it off. If you
   set another ID server in the app's settings, also set that server's key, and that server must
   offer WebSocket over HTTPS on port 443. Clear the fields to go back to your own server.
