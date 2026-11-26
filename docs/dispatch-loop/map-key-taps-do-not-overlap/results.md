@@ -14,7 +14,7 @@ generated:
   at: 2026-11-26T02:41:00-08:00
 verified:
   by: claude/claude-opus-5-5
-  at: 2026-11-26T02:40:54-08:00
+  at: 2026-11-26T02:41:07-08:00
 ---
 
 # Results: map-mode taps do not overlap
