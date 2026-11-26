@@ -122,7 +122,8 @@ void main() {
   });
 
   Future<(List<Sent>, List<(int, bool)>, List<Completer<void>>)> pumpPeer(
-      WidgetTester tester, {required bool mac, bool hold = false}) async {
+      WidgetTester tester,
+      {required bool mac, bool hold = false, bool fail = false}) async {
     final legacy = <Sent>[];
     final map = <(int, bool)>[];
     final gates = <Completer<void>>[];
@@ -144,6 +145,7 @@ void main() {
                     legacy.add((name, alt, ctrl, shift, command)),
                 mapKey: (code, down) {
                   map.add((code, down));
+                  if (fail && map.length == 1) return Future.error('refused');
                   if (!hold || map.length > 1) return Future.value();
                   final gate = Completer<void>();
                   gates.add(gate);
@@ -221,6 +223,58 @@ void main() {
     await tester.pump();
     expect(legacy, [('VK_SPACE', false, false, false, true)]);
     expect(map, isEmpty);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('a tap during a running Desktop sequence on a Mac peer sends '
+      'nothing, and the next one after it sends again', (tester) async {
+    final (legacy, map, gates) = await pumpPeer(tester, mac: true, hold: true);
+    await tester.tap(find.byKey(const Key('duo-shortcut-desktop')));
+    await tester.pump();
+    expect(map, [(103, true)]);
+    await tester.tap(find.byKey(const Key('duo-shortcut-desktop')));
+    await tester.tap(find.byKey(const Key('duo-shortcut-spotlight')));
+    await tester.pump();
+    expect(map, [(103, true)]);
+    expect(legacy, [('VK_SPACE', false, false, false, true)]);
+    gates.single.complete();
+    await tester.pump();
+    await tester.pump(kDuoMacDockDelay ~/ 2);
+    await tester.tap(find.byKey(const Key('duo-shortcut-mission')));
+    await tester.pump();
+    expect(map, [(103, true), (103, false)]);
+    await tester.pump(kDuoMacDockDelay ~/ 2);
+    await tester.pump();
+    const sequence = [
+      (103, true),
+      (103, false),
+      (59, true),
+      (99, true),
+      (99, false),
+      (59, false),
+    ];
+    expect(map, sequence);
+    await tester.tap(find.byKey(const Key('duo-shortcut-desktop')));
+    await tester.pump();
+    await tester.pump(kDuoMacDockDelay);
+    await tester.pump();
+    expect(map, [...sequence, ...sequence]);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('a Desktop sequence whose first key fails still lets the next '
+      'tap send', (tester) async {
+    final (_, map, _) = await pumpPeer(tester, mac: true, fail: true);
+    await tester.tap(find.byKey(const Key('duo-shortcut-desktop')));
+    await tester.pump();
+    await tester.pump(kDuoMacDockDelay);
+    await tester.pump();
+    expect(map.length, 6);
+    await tester.tap(find.byKey(const Key('duo-shortcut-desktop')));
+    await tester.pump();
+    await tester.pump(kDuoMacDockDelay);
+    await tester.pump();
+    expect(map.length, 12);
     await tester.pumpWidget(const SizedBox());
   });
 }

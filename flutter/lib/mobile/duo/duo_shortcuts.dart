@@ -107,7 +107,8 @@ const List<DuoMapKey> kDuoMacDesktopKeys = [
   (103, false),
 ];
 
-/// kVK_Control + kVK_F3, "Move focus to the Dock": brings up an auto-hidden Dock.
+/// kVK_Control + kVK_F3, "Move focus to the Dock": brings up an auto-hidden
+/// Dock.
 const List<DuoMapKey> kDuoMacDockKeys = [
   (59, true),
   (99, true),
@@ -133,24 +134,38 @@ List<DuoMapKey>? _macMapKeys(String name,
 /// Sends a combo that has Mac map keys through [mapKey] when [useMapKeys], and
 /// everything else through [legacy].
 DuoShortcutSender duoPeerAwareSender(
-        {required bool Function() useMapKeys,
-        required DuoShortcutSender legacy,
-        required DuoMapKeySender mapKey}) =>
-    (name, {required alt, required ctrl, required shift, required command}) {
-      final keys = _macMapKeys(name,
-          alt: alt, ctrl: ctrl, shift: shift, command: command);
-      if (keys == null || !useMapKeys()) {
-        legacy(name, alt: alt, ctrl: ctrl, shift: shift, command: command);
-        return;
-      }
-      if (identical(keys, kDuoMacDesktopKeys)) {
-        unawaited(_sendDesktopThenDock(mapKey));
-        return;
-      }
-      unawaited(_sendInOrder(keys, mapKey));
-    };
+    {required bool Function() useMapKeys,
+    required DuoShortcutSender legacy,
+    required DuoMapKeySender mapKey}) {
+  var busy = false;
+  Future<void> run(Future<void> Function() sequence) async {
+    busy = true;
+    try {
+      await sequence();
+    } finally {
+      busy = false;
+    }
+  }
 
-/// The bridge runs each call on a pool thread, so each is awaited to keep the order.
+  return (name,
+      {required alt, required ctrl, required shift, required command}) {
+    final keys = _macMapKeys(name,
+        alt: alt, ctrl: ctrl, shift: shift, command: command);
+    if (keys == null || !useMapKeys()) {
+      legacy(name, alt: alt, ctrl: ctrl, shift: shift, command: command);
+      return;
+    }
+    if (busy) return;
+    if (identical(keys, kDuoMacDesktopKeys)) {
+      unawaited(run(() => _sendDesktopThenDock(mapKey)));
+      return;
+    }
+    unawaited(run(() => _sendInOrder(keys, mapKey)));
+  };
+}
+
+/// The bridge runs each call on a pool thread, so each is awaited to keep the
+/// order.
 Future<void> _sendInOrder(List<DuoMapKey> keys, DuoMapKeySender mapKey) async {
   for (final (code, down) in keys) {
     // Keep going, so a failed press still gets its releases.
