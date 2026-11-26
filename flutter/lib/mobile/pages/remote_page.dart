@@ -236,6 +236,7 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       trySyncClipboard();
+      _duoResumed();
     }
   }
 
@@ -595,6 +596,14 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
 
   bool get _duoDeckActive =>
       currentDuoSplit(MediaQuery.sizeOf(context)) != null;
+
+  void _duoResumed() {
+    if (!mounted) return;
+    DuoFold.instance.refresh();
+    if (_duoDeckActive && !keyboardVisibilityController.isVisible) {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: []);
+    }
+  }
 
   Widget _duoSplit(Widget child) => DuoSplitBody(
       onFoldChanged: () {

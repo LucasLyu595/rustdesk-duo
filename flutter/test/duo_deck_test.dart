@@ -142,8 +142,8 @@ void main() {
     notifier.notifyListeners();
     await tester.pump();
     expect(tester.getRect(find.byKey(pictureKey)),
-        const Rect.fromLTWH(0, 0, 669, 455.5));
-    expect(find.byKey(stripKey), findsNothing);
+        const Rect.fromLTWH(0, 56, 669, 399.5));
+    expect(tester.getRect(find.byKey(stripKey)).bottom, 56);
   });
 
   testWidgets('no fold: no deck', (tester) async {

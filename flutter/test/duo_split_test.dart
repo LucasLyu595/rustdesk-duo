@@ -49,7 +49,7 @@ void main() {
       child: DuoSplitBody(child: SizedBox.expand(key: childKey)),
     ));
     expect(tester.getRect(find.byKey(childKey)),
-        const Rect.fromLTWH(0, 0, 669, 455.5));
+        const Rect.fromLTWH(0, 56, 669, 399.5));
     expect(tester.getRect(find.byType(DuoSplitPlaceholder)),
         const Rect.fromLTRB(0, 455.5, 669, 951));
   });
@@ -101,7 +101,7 @@ void main() {
 
     DuoFold.instance.update(_geo());
     await tester.pump();
-    expect(tester.getSize(find.byKey(probeKey)).height, 455.5);
+    expect(tester.getSize(find.byKey(probeKey)).height, 399.5);
     expect(find.byType(DuoSplitPlaceholder), findsOneWidget);
     expect(changes, 1);
 
@@ -111,15 +111,15 @@ void main() {
 
     DuoFold.instance.update(_flat());
     await tester.pump();
-    expect(tester.getSize(find.byKey(probeKey)).height, closeTo(427.95, 0.01));
+    expect(tester.getSize(find.byKey(probeKey)).height, 399.5);
     expect(find.byType(DuoSplitPlaceholder), findsOneWidget);
-    expect(changes, 2);
+    expect(changes, 1);
 
     _setView(tester, const Size(951, 669));
     await tester.pump();
     expect(tester.getSize(find.byKey(probeKey)).height, 669);
     expect(find.byType(DuoSplitPlaceholder), findsNothing);
-    expect(changes, 3);
+    expect(changes, 2);
     expect(probeKey.currentState, same(state));
   });
 
@@ -141,7 +141,7 @@ void main() {
       ));
       expect(tester.takeException(), isNull);
       expect(find.byType(DuoSplitPlaceholder), findsNothing);
-      expect(tester.getSize(find.byKey(childKey)).height, h);
+      expect(tester.getSize(find.byKey(childKey)).height, h - 56);
     }
   });
 
@@ -257,6 +257,132 @@ void main() {
     });
   });
 
+  group('the strip always shows', () {
+    const childKey = Key('child');
+    const aboveKey = Key('above');
+    const belowKey = Key('below');
+
+    Widget body({double? aspect, VoidCallback? onFoldChanged}) =>
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: DuoSplitBody(
+            aspect: aspect == null ? null : () => aspect,
+            onFoldChanged: onFoldChanged,
+            above: const SizedBox.expand(key: aboveKey),
+            below: const SizedBox.expand(key: belowKey),
+            child: const SizedBox.expand(key: childKey),
+          ),
+        );
+
+    List<Rect> rects(WidgetTester tester) => [
+          tester.getRect(find.byKey(childKey)),
+          tester.getRect(find.byKey(aboveKey)),
+          tester.getRect(find.byKey(belowKey)),
+        ];
+
+    testWidgets('4:3: the strip shows and the picture box starts below it',
+        (tester) async {
+      _setView(tester, const Size(669, 951));
+      DuoFold.instance.update(_geo());
+      await tester.pumpWidget(body(aspect: 4 / 3));
+      expect(tester.getRect(find.byKey(aboveKey)),
+          const Rect.fromLTWH(0, 0, 669, 56));
+      expect(tester.getRect(find.byKey(childKey)),
+          const Rect.fromLTWH(0, 56, 669, 399.5));
+    });
+
+    testWidgets('a top padding of 60: the strip still shows', (tester) async {
+      _setView(tester, const Size(669, 951));
+      tester.view.padding = const FakeViewPadding(top: 60);
+      DuoFold.instance.update(_geo());
+      await tester.pumpWidget(body(aspect: 16 / 9));
+      expect(tester.getRect(find.byKey(aboveKey)),
+          const Rect.fromLTWH(0, 60, 669, 56));
+    });
+
+    testWidgets('a report without the crease leaves the layout unchanged',
+        (tester) async {
+      _setView(tester, const Size(669, 951));
+      var changes = 0;
+      DuoFold.instance.update(_geo());
+      await tester
+          .pumpWidget(body(aspect: 16 / 9, onFoldChanged: () => changes++));
+      final before = rects(tester);
+      DuoFold.instance.update(const DuoGeometry(
+          posture: DuoPosture.open,
+          screen: DuoScreen.unknown,
+          hinge: null,
+          hingeAngle: null));
+      await tester.pump();
+      expect(rects(tester), before);
+      DuoFold.instance.update(_geo());
+      await tester.pump();
+      expect(rects(tester), before);
+      expect(changes, 0);
+    });
+
+    testWidgets('rotation to landscape and back keeps the strip',
+        (tester) async {
+      _setView(tester, const Size(669, 951));
+      DuoFold.instance.update(_geo());
+      await tester.pumpWidget(body(aspect: 16 / 9));
+      _setView(tester, const Size(951, 669));
+      DuoFold.instance
+          .update(_geo(hinge: const Rect.fromLTWH(455.5, 0, 40, 669)));
+      await tester.pump();
+      expect(find.byKey(aboveKey), findsNothing);
+      _setView(tester, const Size(669, 951));
+      await tester.pump();
+      expect(tester.getRect(find.byKey(belowKey)).top, 455.5);
+      expect(find.byKey(aboveKey), findsOneWidget);
+      DuoFold.instance.update(_geo());
+      await tester.pump();
+      expect(tester.getRect(find.byKey(belowKey)).top, 455.5);
+      expect(find.byKey(aboveKey), findsOneWidget);
+    });
+
+    test('the held crease stays with its view size', () {
+      const portrait = Size(669, 951);
+      const cover = Size(466, 678);
+      DuoFold.instance.update(_geo());
+      expect(currentDuoSplit(portrait)!.rowBand, _band);
+      currentDuoSplit(cover);
+      expect(DuoFold.instance.heldBand(cover), isNull);
+      DuoFold.instance.update(const DuoGeometry(
+          posture: DuoPosture.closed,
+          screen: DuoScreen.outer,
+          hinge: null,
+          hingeAngle: null));
+      final split = currentDuoSplit(cover)!;
+      expect(split.rowBand, isNull);
+      expect(split.pictureBottom, closeTo(305.1, 0.01));
+      expect(currentDuoSplit(portrait)!.rowBand, _band);
+    });
+
+    testWidgets('a branch change prints one line', (tester) async {
+      _setView(tester, const Size(669, 951));
+      final lines = <String>[];
+      final saved = debugPrint;
+      debugPrint = (String? m, {int? wrapWidth}) => lines.add(m ?? '');
+      try {
+        DuoFold.instance.update(_geo());
+        await tester.pumpWidget(body(aspect: 16 / 9));
+        final mount = lines.where((l) => l.startsWith('DuoSplit:')).toList();
+        expect(mount, hasLength(1));
+        expect(mount.single, contains('layout=crease strip=true'));
+        await tester.pumpWidget(body(aspect: 16 / 9));
+        expect(lines.where((l) => l.startsWith('DuoSplit:')), hasLength(1));
+        _setView(tester, const Size(951, 669));
+        await tester.pump();
+        final all = lines.where((l) => l.startsWith('DuoSplit:')).toList();
+        expect(all, hasLength(2));
+        expect(all.last, contains('layout=none'));
+      } finally {
+        debugPrint = saved;
+      }
+    });
+  });
+
   test('the latch keeps the cover split', () {
     const cover = Size(466, 678);
     DuoFold.instance.update(const DuoGeometry(
@@ -280,7 +406,7 @@ void main() {
     DuoFold.instance.update(_flat());
     expect(duoCanvasHeight(900, 0, view, aspect: 4 / 3), closeTo(501.75, 0.01));
     DuoFold.instance.update(_geo());
-    expect(duoCanvasHeight(900, 50, view), 405.5);
+    expect(duoCanvasHeight(900, 50, view), 349.5);
     expect(
         duoCanvasHeight(900, 0, view, aspect: 16 / 9), closeTo(376.31, 0.01));
     expect(duoCanvasHeight(300, 50, view), 300);

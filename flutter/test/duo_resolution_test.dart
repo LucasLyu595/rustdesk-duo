@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:duo_display/duo_display.dart';
 import 'package:flutter_hbb/consts.dart';
+import 'package:flutter_hbb/mobile/duo/duo_fold.dart';
 import 'package:flutter_hbb/mobile/duo/duo_resolution.dart';
 import 'package:flutter_hbb/mobile/duo/duo_split.dart';
 import 'package:flutter_hbb/models/model.dart';
@@ -228,8 +229,8 @@ void main() {
     expect('${r!.width}x${r.height}', '800x600');
   });
 
-  test('the fit area ends at the band top; the flat one without a band is '
-      'shorter', () {
+  test('the fit area ends at the band top below the strip; the flat one '
+      'without a band is shorter', () {
     const view = Size(669, 951);
     const band = Rect.fromLTWH(0, 455.5, 669, 40);
     for (final posture in [DuoPosture.book, DuoPosture.open]) {
@@ -241,7 +242,7 @@ void main() {
               hingeAngle: 90),
           view,
           isDuo: true)!;
-      expect(area, const Size(669, 455.5));
+      expect(area, const Size(669, 399.5));
       final r = chooseDuoResolutionFullWidth(k4k, area)!;
       expect('${r.width}x${r.height}', '1280x720');
     }
@@ -259,6 +260,21 @@ void main() {
     expect(cover.height, closeTo(305.1, 0.01));
     expect(pick(k4k, cover), '800x600');
     expect(duoFitAreaFrom(null, view, isDuo: false), isNull);
+    DuoFold.instance.update(DuoGeometry(
+        posture: DuoPosture.book,
+        screen: DuoScreen.inner,
+        hinge: band,
+        hingeAngle: 90));
+    expect(currentDuoFitArea(view), const Size(669, 399.5));
+    expect(currentDuoFitFullWidth(view), isTrue);
+    DuoFold.instance.update(const DuoGeometry(
+        posture: DuoPosture.open,
+        screen: DuoScreen.unknown,
+        hinge: null,
+        hingeAngle: null));
+    expect(currentDuoFitArea(view), const Size(669, 399.5));
+    expect(currentDuoFitFullWidth(view), isTrue);
+    DuoFold.instance.reset();
   });
 
   test('modes macOS lists but cannot set are skipped', () {

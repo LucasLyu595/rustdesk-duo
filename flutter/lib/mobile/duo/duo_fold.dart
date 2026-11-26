@@ -6,7 +6,7 @@
 // stays null, so RustDesk behaves exactly as upstream.
 
 import 'dart:async';
-import 'dart:ui' show Rect;
+import 'dart:ui' show Rect, Size;
 
 import 'package:duo_display/duo_display.dart';
 import 'package:flutter/foundation.dart';
@@ -78,6 +78,8 @@ class DuoFold {
   bool _isDuo = false;
 
   StreamSubscription<DuoGeometry>? _subscription;
+  Size? _heldView;
+  Rect? _heldBand;
 
   /// Starts listening on iOS. Safe to call more than once.
   void start() {
@@ -99,9 +101,28 @@ class DuoFold {
     laptop.value = laptopFoldFrom(next);
   }
 
+  /// Remembers [band] as the crease of a [view]-sized inner screen; it stays
+  /// true through a report without it.
+  void holdBand(Size view, Rect band) {
+    _heldView = view;
+    _heldBand = band;
+  }
+
+  Rect? heldBand(Size view) => view == _heldView ? _heldBand : null;
+
+  /// Re-reads the plugin's latest report, in case a change was missed while
+  /// the app was away.
+  void refresh() {
+    if (_subscription == null) return;
+    DuoDisplay.current().then<void>((_) {},
+        onError: (Object error) => debugPrint('DuoFold: $error'));
+  }
+
   @visibleForTesting
   void reset() {
     _isDuo = false;
+    _heldView = null;
+    _heldBand = null;
     geometry.value = null;
     laptop.value = null;
   }

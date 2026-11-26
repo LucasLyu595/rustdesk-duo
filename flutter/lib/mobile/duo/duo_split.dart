@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/model.dart' show PeerInfo;
 import 'duo_fold.dart';
+import 'duo_shortcuts.dart' show kDuoShortcutMinExtent;
 
 /// Where the remote picture ends and the deck starts, from the top of the view.
 @immutable
@@ -72,19 +73,22 @@ double? duoPeerAspect(PeerInfo? pi) {
 
 /// The split for a Duo in portrait, or null (not a Duo, or a landscape view).
 DuoSplit? duoSplitFrom(DuoGeometry? geometry, Size viewSize,
-    {required bool isDuo, double paddingTop = 0, double? aspect}) {
+    {required bool isDuo, double paddingTop = 0, double? aspect, Rect? held}) {
   if (!isDuo || viewSize.width >= viewSize.height) return null;
   final band = _usableBand(geometry, viewSize);
   final full = aspect == null ? null : paddingTop + viewSize.width / aspect;
   final laptop = geometry != null && laptopFoldFrom(geometry) != null;
-  if (band != null && geometry?.screen == DuoScreen.inner) {
+  final crease =
+      band != null && geometry?.screen == DuoScreen.inner ? band : held;
+  if (crease != null) {
+    final strip = paddingTop + kDuoShortcutMinExtent;
+    final fitted =
+        aspect == null ? strip : crease.top - viewSize.width / aspect;
     return DuoSplit(
-        pictureBottom: band.top,
-        deckTop: band.top,
-        rowBand: band,
-        pictureTop: full != null && full < band.top
-            ? band.top - (full - paddingTop)
-            : 0);
+        pictureBottom: crease.top,
+        deckTop: crease.top,
+        rowBand: crease,
+        pictureTop: min(crease.top, max(strip, fitted)));
   }
   if (geometry?.screen == DuoScreen.inner && !laptop && full != null) {
     final top = paddingTop + kDuoTopClear;
@@ -103,21 +107,41 @@ DuoSplit? duoSplitFrom(DuoGeometry? geometry, Size viewSize,
 double duoPictureOffset(DuoSplit? split, double paddingTop) =>
     split == null ? 0 : max(0, split.pictureTop - paddingTop);
 
+Rect? _heldBand(Size viewSize) {
+  final fold = DuoFold.instance;
+  final geometry = fold.geometry.value;
+  final band = _usableBand(geometry, viewSize);
+  // A band as wide as the view belongs to this view, not to the screen or
+  // orientation the app just left.
+  if (band != null &&
+      geometry?.screen == DuoScreen.inner &&
+      band.left.abs() < 1 &&
+      (band.width - viewSize.width).abs() < 1) {
+    fold.holdBand(viewSize, band);
+  }
+  return fold.heldBand(viewSize);
+}
+
 DuoSplit? currentDuoSplit(Size viewSize,
         {double paddingTop = 0, double? aspect}) =>
     duoSplitFrom(DuoFold.instance.geometry.value, viewSize,
-        isDuo: DuoFold.instance.isDuo, paddingTop: paddingTop, aspect: aspect);
+        isDuo: DuoFold.instance.isDuo,
+        paddingTop: paddingTop,
+        aspect: aspect,
+        held: _heldBand(viewSize));
 
 /// The picture area auto-fit aims at; it does not depend on the peer's picture.
 Size? duoFitAreaFrom(DuoGeometry? geometry, Size viewSize,
-    {required bool isDuo, double paddingTop = 0}) {
-  final split = duoSplitFrom(geometry, viewSize, isDuo: isDuo);
+    {required bool isDuo, double paddingTop = 0, Rect? held}) {
+  final split = duoSplitFrom(geometry, viewSize,
+      isDuo: isDuo, paddingTop: paddingTop, held: held);
   if (split == null) return null;
-  if (_flatWithoutBand(geometry, viewSize)) {
+  if (held == null && _flatWithoutBand(geometry, viewSize)) {
     return Size(viewSize.width,
         kDuoFlatPictureFraction * viewSize.height - paddingTop - kDuoTopClear);
   }
-  return Size(viewSize.width, split.pictureBottom - paddingTop);
+  return Size(
+      viewSize.width, split.pictureBottom - max(split.pictureTop, paddingTop));
 }
 
 bool _flatWithoutBand(DuoGeometry? geometry, Size viewSize) =>
@@ -128,19 +152,22 @@ bool _flatWithoutBand(DuoGeometry? geometry, Size viewSize) =>
 /// Whether auto-fit wants a mode at least as wide as the picture area: the
 /// picture rests on the crease or fills the width below the top strip.
 bool duoFitFullWidthFrom(DuoGeometry? geometry, Size viewSize,
-        {required bool isDuo}) =>
-    duoSplitFrom(geometry, viewSize, isDuo: isDuo)?.rowBand != null ||
+        {required bool isDuo, Rect? held}) =>
+    duoSplitFrom(geometry, viewSize, isDuo: isDuo, held: held)?.rowBand !=
+        null ||
     (isDuo &&
         viewSize.width < viewSize.height &&
         _flatWithoutBand(geometry, viewSize));
 
-bool currentDuoFitFullWidth(Size viewSize) => duoFitFullWidthFrom(
-    DuoFold.instance.geometry.value, viewSize,
-    isDuo: DuoFold.instance.isDuo);
+bool currentDuoFitFullWidth(Size viewSize) =>
+    duoFitFullWidthFrom(DuoFold.instance.geometry.value, viewSize,
+        isDuo: DuoFold.instance.isDuo, held: _heldBand(viewSize));
 
 Size? currentDuoFitArea(Size viewSize, {double paddingTop = 0}) =>
     duoFitAreaFrom(DuoFold.instance.geometry.value, viewSize,
-        isDuo: DuoFold.instance.isDuo, paddingTop: paddingTop);
+        isDuo: DuoFold.instance.isDuo,
+        paddingTop: paddingTop,
+        held: _heldBand(viewSize));
 
 /// Lays [child] above the iPhone Duo's split and a plain area below it.
 /// Without a split, [child] fills the whole body. [child] keeps its State across
@@ -181,6 +208,7 @@ class _DuoSplitBodyState extends State<DuoSplitBody> {
   DuoSplit? _split;
   Size? _view;
   double _top = 0;
+  String? _logged;
 
   DuoSplit? _current() =>
       currentDuoSplit(_view!, paddingTop: _top, aspect: widget.aspect?.call());
@@ -236,6 +264,31 @@ class _DuoSplitBodyState extends State<DuoSplitBody> {
     if (split != _split) setState(() => _split = split);
   }
 
+  void _log(DuoSplit? split, double top) {
+    final strip = widget.above != null && top >= kDuoStripMinExtent;
+    final buttons = strip && top >= kDuoShortcutMinExtent;
+    final layout = split == null
+        ? 'none'
+        : split.rowBand != null
+            ? 'crease'
+            : split.pictureTop > 0
+                ? 'flat'
+                : 'fallback';
+    final branch = '$layout $strip $buttons';
+    if (branch == _logged) return;
+    _logged = branch;
+    final g = DuoFold.instance.geometry.value;
+    final band = g?.hinge;
+    String n(double? v) => v == null ? 'none' : v.toStringAsFixed(1);
+    debugPrint('DuoSplit: layout=$layout strip=$strip buttons=$buttons '
+        'offset=${n(top)} pad=${n(_top)} '
+        'view=${n(_view?.width)}x${n(_view?.height)} '
+        'band=${n(band?.top)}+${n(band?.height)} '
+        'held=${split?.rowBand != null && split?.rowBand != band} '
+        'screen=${g?.screen.name} pose=${g?.posture.name} '
+        'aspect=${widget.aspect?.call()?.toStringAsFixed(3)}');
+  }
+
   @override
   Widget build(BuildContext context) {
     final split = _split;
@@ -244,6 +297,7 @@ class _DuoSplitBodyState extends State<DuoSplitBody> {
       child: LayoutBuilder(builder: (context, constraints) {
         final height = constraints.maxHeight;
         final top = duoPictureOffset(split, _top);
+        _log(split, top);
         return Stack(children: [
           Positioned(
             top: top,
