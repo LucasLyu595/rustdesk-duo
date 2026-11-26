@@ -172,7 +172,11 @@ reports (`inner, book, 114°, … laptop yes`). Normal builds leave it out.
 
 ## Signing
 
-- Free Apple account: the app expires after 7 days; run `bash duo/install-ios.sh` again to renew.
+- Free Apple account: the app expires 7 days after its provisioning profile was made. A reinstall
+  alone does not renew it, because Xcode reuses a profile that is still valid. To renew, move the
+  profile aside (`~/Library/Developer/Xcode/UserData/Provisioning Profiles/`, the one for
+  `com.lucaslyu595.rustdesk-duo`), then run `bash duo/install-ios.sh`; Xcode makes a new 7-day
+  profile. Last renewal: 2026-11-26, expires 2026-12-03 02:44 PST.
   A free account can't sign push notifications, so this fork drops upstream's push and Wi-Fi
   info entitlements (upstream's code uses neither).
 - Paid Apple Developer Program ($99 a year): each install lasts a year.
